@@ -36,7 +36,7 @@ namespace variadic_expansion {
 namespace odr_use_within_init_capture {
 
 int test() {
-
+  
   { // no captures
     const int x = 10;
     auto L = [z = x + 2](int a) {
@@ -46,6 +46,7 @@ int test() {
       return M;
     };
         
+<<<<<<< HEAD
   }
   { // should not capture
     const int x = 10;
@@ -74,6 +75,36 @@ int test() {
       };
     };
   }
+=======
+  }
+  { // should not capture
+    const int x = 10;
+    auto L = [&z = x](int a) {
+      return a;;
+    };
+        
+  }
+  {
+    const int x = 10;
+    auto L = [k = x](char a) { //expected-note {{declared}}
+      return [](int b) { //expected-note {{begins}}
+        return [j = k](int c) { //expected-error {{cannot be implicitly captured}}
+          return c;
+        };
+      };
+    };
+  }
+  {
+    const int x = 10;
+    auto L = [k = x](char a) { 
+      return [=](int b) { 
+        return [j = k](int c) { 
+          return c;
+        };
+      };
+    };
+  }
+>>>>>>> origin/release_35
   {
     const int x = 10;
     auto L = [k = x](char a) { 
@@ -87,6 +118,7 @@ int test() {
 
   return 0;
 }
+<<<<<<< HEAD
 
 int run = test();
 
@@ -164,6 +196,85 @@ int test(T t = T{}) {
   return 0;
 }
 
+=======
+
+int run = test();
+
+}
+
+namespace odr_use_within_init_capture_template {
+
+template<class T = int>
+int test(T t = T{}) {
+
+  { // no captures
+    const T x = 10;
+    auto L = [z = x](char a) {
+      auto M = [y = x](T b) {
+        return y;
+      };
+      return M;
+    };
+        
+  }
+  { // should not capture
+    const T x = 10;
+    auto L = [&z = x](T a) {
+      return a;;
+    };
+        
+  }
+  { // will need to capture x in outer lambda
+    const T x = 10; //expected-note {{declared}}
+    auto L = [z = x](char a) { //expected-note {{begins}}
+      auto M = [&y = x](T b) { //expected-error {{cannot be implicitly captured}}
+        return y;
+      };
+      return M;
+    };
+        
+  }
+  { // will need to capture x in outer lambda
+    const T x = 10; 
+    auto L = [=,z = x](char a) { 
+      auto M = [&y = x](T b) { 
+        return y;
+      };
+      return M;
+    };
+        
+  }
+  { // will need to capture x in outer lambda
+    const T x = 10; 
+    auto L = [x, z = x](char a) { 
+      auto M = [&y = x](T b) { 
+        return y;
+      };
+      return M;
+    };
+  }
+  { // will need to capture x in outer lambda
+    const int x = 10; //expected-note 2{{declared}}
+    auto L = [z = x](char a) { //expected-note 2{{begins}}
+      auto M = [&y = x](T b) { //expected-error 2{{cannot be implicitly captured}}
+        return y;
+      };
+      return M;
+    };     
+  }
+  {
+    // no captures
+    const T x = 10;
+    auto L = [z = 
+                  [z = x, &y = x](char a) { return z + y; }('a')](char a) 
+      { return z; };
+  
+  }
+  
+  return 0;
+}
+
+>>>>>>> origin/release_35
 int run = test(); //expected-note {{instantiation}}
 
 }
