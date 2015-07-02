@@ -25,6 +25,18 @@ inline PartialDiagnostic Sema::PDiag(unsigned DiagID) {
   return PartialDiagnostic(DiagID, Context.getDiagAllocator());
 }
 
+// Reflection extension helper functions
+int RequireValidFieldIndex(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr, size_t MaxIdx);
+const CXXRecordDecl *RequireRecordType(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, bool reqComplete);
+const CXXBaseSpecifier *GetRecordBaseAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr);
+const CXXBaseSpecifier *GetRecordVBaseAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr);
+FieldDecl *GetRecordMemberFieldAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr);
+
 
 // This requires the variable to be non-dependent and the initializer
 // to not be value dependent.

@@ -51,6 +51,10 @@ private:
   // Location of the 'friend' specifier.
   SourceLocation FriendLoc;
 
+  /// C.K.: Can be valid only if friend is a class declaration
+  /// Will lead to importing the friend's friend declarations
+  SourceLocation FriendUsingLoc;
+
   /// True if this 'friend' declaration is unsupported.  Eventually we
   /// will support every possible friend declaration, but for now we
   /// silently ignore some and set this flag to authorize all access.
@@ -74,11 +78,13 @@ private:
 
   FriendDecl(DeclContext *DC, SourceLocation L, FriendUnion Friend,
              SourceLocation FriendL,
+			 SourceLocation UsingL,
              ArrayRef<TemplateParameterList*> FriendTypeTPLists)
     : Decl(Decl::Friend, DC, L),
       Friend(Friend),
       NextFriend(),
       FriendLoc(FriendL),
+      FriendUsingLoc(UsingL),
       UnsupportedFriend(false),
       NumTPLists(FriendTypeTPLists.size()) {
     for (unsigned i = 0; i < NumTPLists; ++i)
@@ -100,6 +106,7 @@ public:
   static FriendDecl *Create(ASTContext &C, DeclContext *DC,
                             SourceLocation L, FriendUnion Friend_,
                             SourceLocation FriendL,
+							SourceLocation UsingL,
                             ArrayRef<TemplateParameterList*> FriendTypeTPLists
                             = None);
   static FriendDecl *CreateDeserialized(ASTContext &C, unsigned ID,
@@ -129,6 +136,15 @@ public:
   /// Retrieves the location of the 'friend' keyword.
   SourceLocation getFriendLoc() const {
     return FriendLoc;
+  }
+
+  /// Retrieves the location of the 'using' keyword, may be invalid.
+  SourceLocation getFriendUsingLoc() const {
+    return FriendUsingLoc;
+  }
+
+  bool isFriendUsingMode() const {
+    return FriendUsingLoc.isValid();
   }
 
   /// Retrieves the source range for the friend declaration.

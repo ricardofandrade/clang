@@ -782,6 +782,11 @@ public:
                                      UnaryTransformType::UTTKind UKind,
                                      SourceLocation Loc);
 
+  QualType RebuildReflectionTransformType(TypeSourceInfo *TSInfo,
+                                          ArrayRef<Expr*> Exprs,
+                                          ReflectionTransformType::RTTKind Kind,
+                                          SourceLocation Loc);
+
   /// \brief Build a new C++11 decltype type.
   ///
   /// By default, performs semantic analysis when building the decltype type.
@@ -2154,6 +2159,19 @@ public:
                                     TypeSourceInfo *RhsT,
                                     SourceLocation RParenLoc) {
     return getSema().BuildBinaryTypeTrait(Trait, StartLoc, LhsT, RhsT, RParenLoc);
+  }
+
+  /// \brief Build a new reflection type trait expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildReflectionTypeTrait(ReflectionTypeTrait Trait,
+    SourceLocation StartLoc,
+    TypeSourceInfo *TSInfo,
+    ArrayRef<Expr*> IdxArgs,
+    SourceLocation RParenLoc) {
+      return getSema().BuildReflectionTypeTrait(Trait, StartLoc, TSInfo,
+                                                IdxArgs, RParenLoc);
   }
 
   /// \brief Build a new type trait expression.
@@ -4626,6 +4644,48 @@ QualType TreeTransform<Derived>::TransformUnaryTransformType(
   NewTL.setParensRange(TL.getParensRange());
   NewTL.setUnderlyingTInfo(TL.getUnderlyingTInfo());
   return Result;
+}
+
+template<typename Derived>
+QualType TreeTransform<Derived>::TransformReflectionTransformType(
+  TypeLocBuilder &TLB,
+  ReflectionTransformTypeLoc TL) {
+    QualType Result = TL.getType();
+
+    // TODO: really correct?
+
+    const ReflectionTransformType *T = TL.getTypePtr();
+    TypeSourceInfo *NewBaseTS =
+      getDerived().TransformType(TL.getReflTInfo());
+
+    if (getDerived().AlwaysRebuild() || Result->isDependentType()) {
+      SmallVector<Expr*, 1> Args;
+      ArrayRef<Expr*> OArgs = T->getParamExprs();
+      for (ArrayRef<Expr*>::const_iterator I = OArgs.begin(), E = OArgs.end();
+           I != E; ++I) {
+        EnterExpressionEvaluationContext Unevaluated(SemaRef, Sema::Unevaluated);
+        ExprResult SubExpr = getDerived().TransformExpr(*I);
+
+        if (SubExpr.isInvalid())
+          return QualType();
+        Args.push_back(SubExpr.get());
+      }
+
+      Result = getDerived().RebuildReflectionTransformType(NewBaseTS,
+        Args,
+        T->getRTTKind(),
+        TL.getKWLoc());
+
+      if (Result.isNull())
+        return QualType();
+    }
+
+    ReflectionTransformTypeLoc NewTL = TLB.push<ReflectionTransformTypeLoc>(Result);
+    NewTL.setKWLoc(TL.getKWLoc());
+    NewTL.setParensRange(TL.getParensRange());
+    NewTL.setReflTInfo(NewBaseTS);
+    // params are simply fetched from Type..
+    return Result;
 }
 
 template<typename Derived>
@@ -7926,6 +7986,36 @@ TreeTransform<Derived>::TransformBinaryTypeTraitExpr(BinaryTypeTraitExpr *E) {
 
 template<typename Derived>
 ExprResult
+  TreeTransform<Derived>::TransformReflectionTypeTraitExpr(ReflectionTypeTraitExpr *E) {
+    TypeSourceInfo *T = getDerived().TransformType(E->getQueriedTypeSourceInfo());
+    if (!T)
+      return ExprError();
+
+    bool ArgChanged = T != E->getQueriedTypeSourceInfo();
+
+    SmallVector<Expr*, 2> Args;
+    for (unsigned I = 0, N = E->getNumIndex(); I != N; ++I) {
+      EnterExpressionEvaluationContext Unevaluated(SemaRef, Sema::Unevaluated);
+      ExprResult SubExpr = getDerived().TransformExpr(E->getIndex(I));
+      if (SubExpr.isInvalid())
+        return ExprError();
+
+      Args.push_back(SubExpr.get());
+      ArgChanged = ArgChanged || SubExpr.get() != E->getIndex(I);
+    }
+
+    if (!getDerived().AlwaysRebuild() && !ArgChanged)
+      return SemaRef.Owned(E);
+
+    return getDerived().RebuildReflectionTypeTrait(E->getTrait(),
+      E->getLocStart(),
+      T,
+      Args,
+      E->getLocEnd());
+}
+
+template<typename Derived>
+ExprResult
 TreeTransform<Derived>::TransformTypeTraitExpr(TypeTraitExpr *E) {
   bool ArgChanged = false;
   SmallVector<TypeSourceInfo *, 4> Args;
@@ -8066,10 +8156,6 @@ TreeTransform<Derived>::TransformArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
   if (!T)
     return ExprError();
 
-  if (!getDerived().AlwaysRebuild() &&
-      T == E->getQueriedTypeSourceInfo())
-    return SemaRef.Owned(E);
-
   ExprResult SubExpr;
   {
     EnterExpressionEvaluationContext Unevaluated(SemaRef, Sema::Unevaluated);
@@ -8077,7 +8163,9 @@ TreeTransform<Derived>::TransformArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
     if (SubExpr.isInvalid())
       return ExprError();
 
-    if (!getDerived().AlwaysRebuild() && SubExpr.get() == E->getDimensionExpression())
+    if (!getDerived().AlwaysRebuild() &&
+      T == E->getQueriedTypeSourceInfo() &&
+      SubExpr.get() == E->getDimensionExpression())
       return SemaRef.Owned(E);
   }
 
@@ -9595,6 +9683,15 @@ QualType TreeTransform<Derived>::RebuildUnaryTransformType(QualType BaseType,
                                             UnaryTransformType::UTTKind UKind,
                                             SourceLocation Loc) {
   return SemaRef.BuildUnaryTransformType(BaseType, UKind, Loc);
+}
+
+template<typename Derived>
+QualType TreeTransform<Derived>::RebuildReflectionTransformType(TypeSourceInfo *TSInfo,
+                                          ArrayRef<Expr*> Exprs,
+                                          ReflectionTransformType::RTTKind Kind,
+                                          SourceLocation Loc)
+{
+    return SemaRef.BuildReflectionTransformType(TSInfo, Exprs, Kind, Loc);
 }
 
 template<typename Derived>

@@ -2417,6 +2417,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::TypeOf:
   case Type::Decltype:
   case Type::UnaryTransform:
+  case Type::ReflectionTransform:
   case Type::DependentName:
   case Type::InjectedClassName:
   case Type::TemplateSpecialization:
@@ -3655,6 +3656,20 @@ QualType ASTContext::getUnaryTransformType(QualType BaseType,
                                  QualType() : getCanonicalType(UnderlyingType));
   Types.push_back(Ty);
   return QualType(Ty, 0);
+}
+
+/// getReflectionTransformType - We don't unique these...
+QualType ASTContext::getReflectionTransformType(QualType BaseType,
+                                                QualType ReflType,
+                                                ArrayRef<Expr*> Exprs,
+                                                ReflectionTransformType::RTTKind Kind)
+  const {
+    ReflectionTransformType *Ty =
+      new (*this, TypeAlignment) ReflectionTransformType(BaseType, ReflType,
+                                                         Kind, Exprs,
+        ReflType->isDependentType() ? QualType() : getCanonicalType(ReflType));
+    Types.push_back(Ty);
+    return QualType(Ty, 0);
 }
 
 /// getAutoType - Return the uniqued reference to the 'auto' type which has been

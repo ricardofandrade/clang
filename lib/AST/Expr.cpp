@@ -2734,6 +2734,10 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef) const {
       return false;
     return cast<ChooseExpr>(this)->getChosenSubExpr()
       ->isConstantInitializer(Ctx, IsForRef);
+  case ReflectionTypeTraitExprClass: {
+    //const Expr *ValExpr = cast<ReflectionTypeTraitExpr>(this)->getValue();
+    return true;   // Okay? Handles StringLiteral.. cases
+                                     }
   case UnaryOperatorClass: {
     const UnaryOperator* Exp = cast<UnaryOperator>(this);
     if (Exp->getOpcode() == UO_Extension)
@@ -2820,6 +2824,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx) const {
   case TypeTraitExprClass:
   case UnaryTypeTraitExprClass:
   case BinaryTypeTraitExprClass:
+  case ReflectionTypeTraitExprClass:
   case ArrayTypeTraitExprClass:
   case ExpressionTraitExprClass:
   case CXXNoexceptExprClass:

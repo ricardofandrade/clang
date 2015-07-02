@@ -112,6 +112,8 @@ bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
   case tok::kw_typeof:
   case tok::annot_decltype:
   case tok::kw_decltype:
+  case tok::kw___record_base_type:
+  case tok::kw___record_virtual_base_type:
     return getLangOpts().CPlusPlus;
 
   default:
@@ -4004,6 +4006,20 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
 
   DeclSpec &DS = D.getMutableDeclSpec();
   switch (DS.getTypeSpecType()) {
+  case DeclSpec::TST_recordBaseType:
+  case DeclSpec::TST_recordVirtualBaseType: {
+    // Update all parameter expressions
+    ArrayRef<Expr*> Args = DS.getParamExprs();
+    SmallVector<Expr*, 2> NArgs;
+    for (ArrayRef<Expr*>::iterator I = Args.begin(), E = Args.end();
+         I != E; ++I) {
+        ExprResult EResult = S.RebuildExprInCurrentInstantiation(*I);
+        if (EResult.isInvalid()) return true;
+        NArgs.push_back(EResult.get());
+    }
+    DS.UpdateParamExprs(NArgs);
+                                            }
+    // fall through!
   case DeclSpec::TST_typename:
   case DeclSpec::TST_typeofType:
   case DeclSpec::TST_underlyingType:
@@ -10314,6 +10330,8 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                      SourceLocation ModulePrivateLoc,
                      MultiTemplateParamsArg TemplateParameterLists,
                      bool &OwnedDecl, bool &IsDependent,
+                     SourceLocation FriendLoc,
+                     SourceLocation FriendUsingLoc,
                      SourceLocation ScopedEnumKWLoc,
                      bool ScopedEnumUsesClassTag,
                      TypeResult UnderlyingType) {
@@ -10357,6 +10375,8 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
                                                SS, Name, NameLoc, Attr,
                                                TemplateParams, AS,
                                                ModulePrivateLoc,
+                                               FriendLoc,
+                                               FriendUsingLoc,
                                                TemplateParameterLists.size()-1,
                                                TemplateParameterLists.data());
         return Result.get();
