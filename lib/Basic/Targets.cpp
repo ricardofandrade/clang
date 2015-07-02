@@ -138,33 +138,37 @@ static void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     return;
   }
 
-  // Set the appropriate OS version define.
-  if (Triple.isiOS()) {
-    assert(Maj < 10 && Min < 100 && Rev < 100 && "Invalid version!");
-    char Str[6];
-    Str[0] = '0' + Maj;
-    Str[1] = '0' + (Min / 10);
-    Str[2] = '0' + (Min % 10);
-    Str[3] = '0' + (Rev / 10);
-    Str[4] = '0' + (Rev % 10);
-    Str[5] = '\0';
-    Builder.defineMacro("__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__", Str);
-  } else if (Triple.getArchName() != "thumbv6m" &&
-             Triple.getArchName() != "thumbv7m" &&
-             Triple.getArchName() != "thumbv7em") {
-    // Note that the Driver allows versions which aren't representable in the
-    // define (because we only get a single digit for the minor and micro
-    // revision numbers). So, we limit them to the maximum representable
-    // version.
-    assert(Triple.getEnvironmentName().empty() && "Invalid environment!");
-    assert(Maj < 100 && Min < 100 && Rev < 100 && "Invalid version!");
-    char Str[5];
-    Str[0] = '0' + (Maj / 10);
-    Str[1] = '0' + (Maj % 10);
-    Str[2] = '0' + std::min(Min, 9U);
-    Str[3] = '0' + std::min(Rev, 9U);
-    Str[4] = '\0';
-    Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
+  // If there's an environment specified in the triple, that means we're dealing
+  // with an embedded variant of some sort and don't want the platform
+  // version-min defines, so only add them if there's not one.
+  if (Triple.getEnvironmentName().empty()) {
+    // Set the appropriate OS version define.
+    if (Triple.isiOS()) {
+      assert(Maj < 10 && Min < 100 && Rev < 100 && "Invalid version!");
+      char Str[6];
+      Str[0] = '0' + Maj;
+      Str[1] = '0' + (Min / 10);
+      Str[2] = '0' + (Min % 10);
+      Str[3] = '0' + (Rev / 10);
+      Str[4] = '0' + (Rev % 10);
+      Str[5] = '\0';
+      Builder.defineMacro("__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__",
+                          Str);
+    } else {
+      // Note that the Driver allows versions which aren't representable in the
+      // define (because we only get a single digit for the minor and micro
+      // revision numbers). So, we limit them to the maximum representable
+      // version.
+      assert(Triple.getEnvironmentName().empty() && "Invalid environment!");
+      assert(Maj < 100 && Min < 100 && Rev < 100 && "Invalid version!");
+      char Str[5];
+      Str[0] = '0' + (Maj / 10);
+      Str[1] = '0' + (Maj % 10);
+      Str[2] = '0' + std::min(Min, 9U);
+      Str[3] = '0' + std::min(Rev, 9U);
+      Str[4] = '\0';
+      Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
+    }
   }
 
   PlatformMinVersion = VersionTuple(Maj, Min, Rev);
@@ -354,6 +358,16 @@ public:
   LinuxTargetInfo(const llvm::Triple &Triple) : OSTargetInfo<Target>(Triple) {
     this->UserLabelPrefix = "";
     this->WIntType = TargetInfo::UnsignedInt;
+
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::ppc:
+    case llvm::Triple::ppc64:
+    case llvm::Triple::ppc64le:
+      this->MCountName = "_mcount";
+      break;
+    }
   }
 
   virtual const char *getStaticInitSectionSpecifier() const {
@@ -1267,7 +1281,7 @@ public:
     LongLongAlign = 32;
     SuitableAlign = 128;
     DescriptionString = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
-                        "i64:32:64-f32:32:32-f64:64:64-v128:128:128-n32";
+                        "i64:32:64-f32:32:32-f64:32:64-v128:128:128-n32";
   }
   virtual BuiltinVaListKind getBuiltinVaListKind() const {
     return TargetInfo::CharPtrBuiltinVaList;
@@ -1539,6 +1553,7 @@ public:
       .Case("bonaire",  GK_SEA_ISLANDS)
       .Case("kabini",   GK_SEA_ISLANDS)
       .Case("kaveri",   GK_SEA_ISLANDS)
+      .Case("hawaii",   GK_SEA_ISLANDS)
       .Default(GK_NONE);
 
     if (GPU == GK_NONE) {
@@ -3400,6 +3415,7 @@ class AArch64TargetInfo : public TargetInfo {
   };
 
   unsigned FPU;
+  unsigned Crypto;
   static const Builtin::Info BuiltinInfo[];
 
 public:
@@ -3429,22 +3445,20 @@ public:
     Builder.defineMacro("__AARCH64EL__");
 
     // ACLE predefines. Many can only have one possible value on v8 AArch64.
-
-    // FIXME: these were written based on an unreleased version of a 32-bit ACLE
-    // which was intended to be compatible with a 64-bit implementation. They
-    // will need updating when a real 64-bit ACLE exists. Particularly pressing
-    // instances are: __ARM_ARCH_ISA_ARM, __ARM_ARCH_ISA_THUMB, __ARM_PCS.
-    Builder.defineMacro("__ARM_ACLE",         "101");
+    Builder.defineMacro("__ARM_ACLE",         "200");
     Builder.defineMacro("__ARM_ARCH",         "8");
     Builder.defineMacro("__ARM_ARCH_PROFILE", "'A'");
+
+    Builder.defineMacro("__ARM_64BIT_STATE");
+    Builder.defineMacro("__ARM_PCS_AAPCS64");
+    Builder.defineMacro("__ARM_ARCH_ISA_A64");
 
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED");
     Builder.defineMacro("__ARM_FEATURE_CLZ");
     Builder.defineMacro("__ARM_FEATURE_FMA");
+    Builder.defineMacro("__ARM_FEATURE_DIV");
 
-    // FIXME: ACLE 1.1 reserves bit 4. Will almost certainly come to mean
-    // 128-bit LDXP present, at which point this becomes 0x1f.
-    Builder.defineMacro("__ARM_FEATURE_LDREX", "0xf");
+    Builder.defineMacro("__ARM_ALIGN_MAX_STACK_PWR", "4");
 
     // 0xe implies support for half, single and double precision operations.
     Builder.defineMacro("__ARM_FP", "0xe");
@@ -3469,10 +3483,13 @@ public:
       Builder.defineMacro("__AARCH_BIG_ENDIAN");
 
     if (FPU == NeonMode) {
-      Builder.defineMacro("__AARCH_FEATURE_ADVSIMD");
-
+      Builder.defineMacro("__ARM_NEON");
       // 64-bit NEON supports half, single and double precision operations.
-      Builder.defineMacro("__AARCH_ADVSIMD_FP", "0xe");
+      Builder.defineMacro("__ARM_NEON_FP", "7");
+    }
+
+    if (Crypto) {
+      Builder.defineMacro("__ARM_FEATURE_CRYPTO");
     }
   }
   virtual void getTargetBuiltins(const Builtin::Info *&Records,
@@ -3494,9 +3511,12 @@ public:
   virtual bool handleTargetFeatures(std::vector<std::string> &Features,
                                     DiagnosticsEngine &Diags) {
     FPU = FPUMode;
+    Crypto = 0;
     for (unsigned i = 0, e = Features.size(); i != e; ++i) {
       if (Features[i] == "+neon")
         FPU = NeonMode;
+      if (Features[i] == "+crypto")
+        Crypto = 1;
     }
     return true;
   }
@@ -3669,6 +3689,7 @@ class ARMTargetInfo : public TargetInfo {
     // it is safe to use atomic instructions on armv6 and newer.
     if (!T.isOSLinux() &&
         T.getOS() != llvm::Triple::FreeBSD &&
+        T.getOS() != llvm::Triple::NetBSD &&
         T.getOS() != llvm::Triple::Bitrig)
       return false;
     StringRef ArchName = T.getArchName();
@@ -3696,10 +3717,19 @@ public:
       : TargetInfo(Triple), ABI("aapcs-linux"), CPU("arm1136j-s"),
         FPMath(FP_Default), IsAAPCS(true) {
     BigEndian = false;
-    SizeType = UnsignedInt;
-    PtrDiffType = SignedInt;
-    // AAPCS 7.1.1, ARM-Linux ABI 2.4: type of wchar_t is unsigned int.
-    WCharType = UnsignedInt;
+    switch (getTriple().getOS()) {
+    case llvm::Triple::NetBSD:
+      SizeType = UnsignedLong;
+      PtrDiffType = SignedLong;
+      WCharType = SignedInt;
+      break;
+    default:
+      // AAPCS 7.1.1, ARM-Linux ABI 2.4: type of wchar_t is unsigned int.
+      WCharType = UnsignedInt;
+      SizeType = UnsignedInt;
+      PtrDiffType = SignedInt;
+      break;
+    }
 
     // {} in inline assembly are neon specifiers, not assembly variant
     // specifiers.
@@ -3956,8 +3986,8 @@ public:
       Builder.defineMacro("__THUMB_INTERWORK__");
 
     if (ABI == "aapcs" || ABI == "aapcs-linux" || ABI == "aapcs-vfp") {
-      // M-class CPUs on Darwin follow AAPCS, but not EABI.
-      if (!(getTriple().isOSDarwin() && CPUProfile == "M"))
+      // Embedded targets on Darwin follow AAPCS, but not EABI.
+      if (!getTriple().isOSDarwin())
         Builder.defineMacro("__ARM_EABI__");
       Builder.defineMacro("__ARM_PCS", "1");
 
@@ -4086,7 +4116,7 @@ public:
     case 'r': {
       switch (Modifier) {
       default:
-        return (isInOut || isOutput || Size <= 32);
+        return (isInOut || isOutput || Size <= 64);
       case 'q':
         // A register of size 32 cannot fit a vector type.
         return false;
@@ -4916,7 +4946,7 @@ public:
   }
   virtual void getGCCRegNames(const char * const *&Names,
                               unsigned &NumNames) const {
-    static const char * const GCCRegNames[] = {
+    static const char *const GCCRegNames[] = {
       // CPU register names
       // Must match second column of GCCRegAliases
       "$0",   "$1",   "$2",   "$3",   "$4",   "$5",   "$6",   "$7",
@@ -4930,7 +4960,15 @@ public:
       "$f24", "$f25", "$f26", "$f27", "$f28", "$f29", "$f30", "$f31",
       // Hi/lo and condition register names
       "hi",   "lo",   "",     "$fcc0","$fcc1","$fcc2","$fcc3","$fcc4",
-      "$fcc5","$fcc6","$fcc7"
+      "$fcc5","$fcc6","$fcc7",
+      // MSA register names
+      "$w0",  "$w1",  "$w2",  "$w3",  "$w4",  "$w5",  "$w6",  "$w7",
+      "$w8",  "$w9",  "$w10", "$w11", "$w12", "$w13", "$w14", "$w15",
+      "$w16", "$w17", "$w18", "$w19", "$w20", "$w21", "$w22", "$w23",
+      "$w24", "$w25", "$w26", "$w27", "$w28", "$w29", "$w30", "$w31",
+      // MSA control register names
+      "$msair",      "$msacsr", "$msaaccess", "$msasave", "$msamodify",
+      "$msarequest", "$msamap", "$msaunmap"
     };
     Names = GCCRegNames;
     NumNames = llvm::array_lengthof(GCCRegNames);
@@ -5099,12 +5137,8 @@ public:
 
 class Mips32EBTargetInfo : public Mips32TargetInfoBase {
   virtual void setDescriptionString() {
-    if (HasFP64)
-      DescriptionString = "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-"
-                          "i64:64:64-f32:32:32-f64:64:64-v64:64:64-n32-S128";
-    else
-      DescriptionString = "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-"
-                          "i64:64:64-f32:32:32-f64:64:64-v64:64:64-n32-S64";
+    DescriptionString = "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-"
+                        "i64:64:64-f32:32:32-f64:64:64-v64:64:64-n32-S64";
   }
 
 public:
@@ -5121,12 +5155,8 @@ public:
 
 class Mips32ELTargetInfo : public Mips32TargetInfoBase {
   virtual void setDescriptionString() {
-    if (HasFP64)
-      DescriptionString = "e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-"
-                          "i64:64:64-f32:32:32-f64:64:64-v64:64:64-n32-S128";
-    else
-      DescriptionString = "e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-"
-                          "i64:64:64-f32:32:32-f64:64:64-v64:64:64-n32-S64";
+    DescriptionString = "e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-"
+                        "i64:64:64-f32:32:32-f64:64:64-v64:64:64-n32-S64";
   }
 
 public:
@@ -5453,6 +5483,11 @@ public:
     LongLongAlign = 32;
     SuitableAlign = 32;
     DoubleAlign = LongDoubleAlign = 32;
+    SizeType = UnsignedInt;
+    PtrDiffType = SignedInt;
+    IntPtrType = SignedInt;
+    WCharType = UnsignedChar;
+    WIntType = UnsignedInt;
     UseZeroLengthBitfieldAlignment = true;
     DescriptionString = "e-p:32:32:32-a0:0:32-n32"
                         "-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32"

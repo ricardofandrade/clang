@@ -329,8 +329,17 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
         // The ASAN runtime library requires C++.
         AddCXXStdlibLibArgs(Args, CmdArgs);
       }
-      AddLinkRuntimeLib(Args, CmdArgs,
-                        "libclang_rt.asan_osx_dynamic.dylib", true);
+      if (isTargetMacOS()) {
+        AddLinkRuntimeLib(Args, CmdArgs,
+                          "libclang_rt.asan_osx_dynamic.dylib",
+                          true);
+      } else {
+        if (isTargetIOSSimulator()) {
+          AddLinkRuntimeLib(Args, CmdArgs,
+                            "libclang_rt.asan_iossim_dynamic.dylib",
+                            true);
+        }
+      }
     }
   }
 
@@ -784,6 +793,10 @@ DerivedArgList *Darwin::TranslateArgs(const DerivedArgList &Args,
 
     else if (Name == "x86_64")
       DAL->AddFlagArg(0, Opts.getOption(options::OPT_m64));
+    else if (Name == "x86_64h") {
+      DAL->AddFlagArg(0, Opts.getOption(options::OPT_m64));
+      DAL->AddJoinedArg(0, MArch, "x86_64h");
+    }
 
     else if (Name == "arm")
       DAL->AddJoinedArg(0, MArch, "armv4t");
@@ -1336,6 +1349,11 @@ static bool isMicroMips(const ArgList &Args) {
   return A && A->getOption().matches(options::OPT_mmicromips);
 }
 
+static bool isMipsFP64(const ArgList &Args) {
+  Arg *A = Args.getLastArg(options::OPT_mfp64, options::OPT_mfp32);
+  return A && A->getOption().matches(options::OPT_mfp64);
+}
+
 static bool isMipsNan2008(const ArgList &Args) {
   Arg *A = Args.getLastArg(options::OPT_mnan_EQ);
   return A && A->getValue() == StringRef("2008");
@@ -1449,8 +1467,13 @@ void Generic_GCC::GCCInstallationDetector::findMIPSABIDirSuffix(
 
     if (isSoftFloatABI(Args))
       Suffix += "/sof";
-    else if (isMipsNan2008(Args))
-      Suffix += "/nan2008";
+    else {
+      if (isMipsFP64(Args))
+        Suffix += "/fp64";
+
+      if (isMipsNan2008(Args))
+        Suffix += "/nan2008";
+    }
   }
 
   if (!hasCrtBeginObj(Path + Suffix))
@@ -1597,6 +1620,21 @@ bool Generic_GCC::isPIEDefault() const {
 
 bool Generic_GCC::isPICDefaultForced() const {
   return false;
+}
+
+void Generic_GCC::addClangTargetOptions(const ArgList &DriverArgs,
+                                        ArgStringList &CC1Args) const {
+  const Generic_GCC::GCCVersion &V = GCCInstallation.getVersion();
+  bool UseInitArrayDefault = 
+      getTriple().getArch() == llvm::Triple::aarch64 ||
+      (getTriple().getOS() == llvm::Triple::Linux && (
+         !V.isOlderThan(4, 7, 0) ||
+         getTriple().getEnvironment() == llvm::Triple::Android));
+
+  if (DriverArgs.hasFlag(options::OPT_fuse_init_array,
+                         options::OPT_fno_use_init_array,
+                         UseInitArrayDefault))
+    CC1Args.push_back("-fuse-init-array");
 }
 
 /// Hexagon Toolchain
@@ -2511,19 +2549,6 @@ Tool *Linux::buildLinker() const {
 
 Tool *Linux::buildAssembler() const {
   return new tools::gnutools::Assemble(*this);
-}
-
-void Linux::addClangTargetOptions(const ArgList &DriverArgs,
-                                  ArgStringList &CC1Args) const {
-  const Generic_GCC::GCCVersion &V = GCCInstallation.getVersion();
-  bool UseInitArrayDefault =
-      !V.isOlderThan(4, 7, 0) ||
-      getTriple().getArch() == llvm::Triple::aarch64 ||
-      getTriple().getEnvironment() == llvm::Triple::Android;
-  if (DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                         options::OPT_fno_use_init_array,
-                         UseInitArrayDefault))
-    CC1Args.push_back("-fuse-init-array");
 }
 
 std::string Linux::computeSysRoot() const {

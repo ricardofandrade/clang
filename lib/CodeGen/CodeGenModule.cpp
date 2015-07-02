@@ -181,8 +181,22 @@ void CodeGenModule::applyReplacements() {
     llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
     if (!Entry)
       continue;
-    Entry->replaceAllUsesWith(Replacement);
-    Entry->eraseFromParent();
+    llvm::Function *OldF = cast<llvm::Function>(Entry);
+    llvm::Function *NewF = dyn_cast<llvm::Function>(Replacement);
+    if (!NewF) {
+      llvm::ConstantExpr *CE = cast<llvm::ConstantExpr>(Replacement);
+      assert(CE->getOpcode() == llvm::Instruction::BitCast ||
+             CE->getOpcode() == llvm::Instruction::GetElementPtr);
+      NewF = dyn_cast<llvm::Function>(CE->getOperand(0));
+    }
+
+    // Replace old with new, but keep the old order.
+    OldF->replaceAllUsesWith(Replacement);
+    if (NewF) {
+      NewF->removeFromParent();
+      OldF->getParent()->getFunctionList().insertAfter(OldF, NewF);
+    }
+    OldF->eraseFromParent();
   }
 }
 
@@ -244,6 +258,14 @@ void CodeGenModule::Release() {
     // We can change from Warning to Latest if such mode is supported.
     getModule().addModuleFlag(llvm::Module::Warning, "Dwarf Version",
                               CodeGenOpts.DwarfVersion);
+  if (DebugInfo)
+    // We support a single version in the linked module: error out when
+    // modules do not have the same version. We are going to implement dropping
+    // debug info when the version number is not up-to-date. Once that is
+    // done, the bitcode linker is not going to see modules with different
+    // version numbers.
+    getModule().addModuleFlag(llvm::Module::Error, "Debug Info Version",
+                              llvm::DEBUG_METADATA_VERSION);
 
   SimplifyPersonality();
 
@@ -1543,6 +1565,9 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
       return Entry;
 
     // Make sure the result is of the correct type.
+    if (Entry->getType()->getAddressSpace() != Ty->getAddressSpace())
+      return llvm::ConstantExpr::getAddrSpaceCast(Entry, Ty);
+
     return llvm::ConstantExpr::getBitCast(Entry, Ty);
   }
 
@@ -1590,12 +1615,19 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName,
         CXXThreadLocals.push_back(std::make_pair(D, GV));
       setTLSMode(GV, *D);
     }
+
+    // If required by the ABI, treat declarations of static data members with
+    // inline initializers as definitions.
+    if (getCXXABI().isInlineInitializedStaticDataMemberLinkOnce() &&
+        D->isStaticDataMember() && D->hasInit() &&
+        !D->isThisDeclarationADefinition())
+      EmitGlobalVarDefinition(D);
   }
 
   if (AddrSpace != Ty->getAddressSpace())
-    return llvm::ConstantExpr::getBitCast(GV, Ty);
-  else
-    return GV;
+    return llvm::ConstantExpr::getAddrSpaceCast(GV, Ty);
+
+  return GV;
 }
 
 
@@ -1788,7 +1820,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D) {
   // Strip off a bitcast if we got one back.
   if (llvm::ConstantExpr *CE = dyn_cast<llvm::ConstantExpr>(Entry)) {
     assert(CE->getOpcode() == llvm::Instruction::BitCast ||
-           // all zero index gep.
+           CE->getOpcode() == llvm::Instruction::AddrSpaceCast ||
+           // All zero index gep.
            CE->getOpcode() == llvm::Instruction::GetElementPtr);
     Entry = CE->getOperand(0);
   }
@@ -1842,6 +1875,14 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D) {
   llvm::GlobalValue::LinkageTypes Linkage = 
     GetLLVMLinkageVarDefinition(D, GV->isConstant());
   GV->setLinkage(Linkage);
+
+  // If required by the ABI, give definitions of static data members with inline
+  // initializers linkonce_odr linkage.
+  if (getCXXABI().isInlineInitializedStaticDataMemberLinkOnce() &&
+      D->isStaticDataMember() && InitExpr &&
+      !InitDecl->isThisDeclarationADefinition())
+    GV->setLinkage(llvm::GlobalVariable::LinkOnceODRLinkage);
+
   if (Linkage == llvm::GlobalVariable::CommonLinkage)
     // common vars aren't constant even if declared const.
     GV->setConstant(false);
@@ -2062,6 +2103,10 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD) {
     Entry = CE->getOperand(0);
   }
 
+  if (!cast<llvm::GlobalValue>(Entry)->isDeclaration()) {
+    getDiags().Report(D->getLocation(), diag::err_duplicate_mangled_name);
+    return;
+  }
 
   if (cast<llvm::GlobalValue>(Entry)->getType()->getElementType() != Ty) {
     llvm::GlobalValue *OldFn = cast<llvm::GlobalValue>(Entry);
@@ -2611,11 +2656,16 @@ static llvm::GlobalVariable *GenerateStringLiteral(StringRef str,
   llvm::Constant *C =
       llvm::ConstantDataArray::getString(CGM.getLLVMContext(), str, false);
 
+  // OpenCL v1.1 s6.5.3: a string literal is in the constant address space.
+  unsigned AddrSpace = 0;
+  if (CGM.getLangOpts().OpenCL)
+    AddrSpace = CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant);
+
   // Create a global variable for this string
-  llvm::GlobalVariable *GV =
-    new llvm::GlobalVariable(CGM.getModule(), C->getType(), constant,
-                             llvm::GlobalValue::PrivateLinkage,
-                             C, GlobalName);
+  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+      CGM.getModule(), C->getType(), constant,
+      llvm::GlobalValue::PrivateLinkage, C, GlobalName, 0,
+      llvm::GlobalVariable::NotThreadLocal, AddrSpace);
   GV->setAlignment(Alignment);
   GV->setUnnamedAddr(true);
   return GV;

@@ -164,6 +164,8 @@ public:
   virtual bool isPICDefault() const;
   virtual bool isPIEDefault() const;
   virtual bool isPICDefaultForced() const;
+  virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                                     llvm::opt::ArgStringList &CC1Args) const;
 
 protected:
   virtual Tool *getTool(Action::ActionClass AC) const;
@@ -329,19 +331,8 @@ public:
     return true;
   }
   virtual bool IsIntegratedAssemblerDefault() const {
-#ifdef DISABLE_DEFAULT_INTEGRATED_ASSEMBLER
-    return false;
-#else
     // Default integrated assembler to on for Darwin.
     return true;
-#endif
-  }
-  virtual bool IsStrictAliasingDefault() const {
-#ifdef DISABLE_DEFAULT_STRICT_ALIASING
-    return false;
-#else
-    return ToolChain::IsStrictAliasingDefault();
-#endif
   }
 
   virtual bool IsMathErrnoDefault() const {
@@ -590,8 +581,6 @@ public:
   virtual void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const;
-  virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                     llvm::opt::ArgStringList &CC1Args) const;
   virtual void
   AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                llvm::opt::ArgStringList &CC1Args) const;

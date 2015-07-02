@@ -183,6 +183,11 @@ static const char *getARMTargetCPU(const ArgList &Args,
     MArch = Triple.getArchName();
   }
 
+  if (Triple.getOS() == llvm::Triple::NetBSD) {
+    if (MArch == "armv6")
+      return "arm1176jzf-s";
+  }
+
   const char *result = llvm::StringSwitch<const char *>(MArch)
     .Cases("armv2", "armv2a","arm2")
     .Case("armv3", "arm6")
@@ -252,12 +257,26 @@ static const char *getLLVMArchSuffixForARM(StringRef CPU) {
     .Default("");
 }
 
-std::string ToolChain::ComputeLLVMTriple(const ArgList &Args, 
+std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
                                          types::ID InputType) const {
   switch (getTriple().getArch()) {
   default:
     return getTripleString();
 
+  case llvm::Triple::x86_64: {
+    llvm::Triple Triple = getTriple();
+    if (!Triple.isOSDarwin())
+      return getTripleString();
+
+    if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+      // x86_64h goes in the triple. Other -march options just use the
+      // vanilla triple we already have.
+      StringRef MArch = A->getValue();
+      if (MArch == "x86_64h")
+        Triple.setArchName(MArch);
+    }
+    return Triple.getTriple();
+  }
   case llvm::Triple::arm:
   case llvm::Triple::thumb: {
     // FIXME: Factor into subclasses.
@@ -411,16 +430,19 @@ void ToolChain::AddCCKextLibArgs(const ArgList &Args,
 
 bool ToolChain::AddFastMathRuntimeIfAvailable(const ArgList &Args,
                                               ArgStringList &CmdArgs) const {
-  // Check if -ffast-math or -funsafe-math is enabled.
-  Arg *A = Args.getLastArg(options::OPT_ffast_math,
-                           options::OPT_fno_fast_math,
-                           options::OPT_funsafe_math_optimizations,
-                           options::OPT_fno_unsafe_math_optimizations);
+  // Do not check for -fno-fast-math or -fno-unsafe-math when -Ofast passed
+  // (to keep the linker options consistent with gcc and clang itself).
+  if (!isOptimizationLevelFast(Args)) {
+    // Check if -ffast-math or -funsafe-math.
+    Arg *A =
+        Args.getLastArg(options::OPT_ffast_math, options::OPT_fno_fast_math,
+                        options::OPT_funsafe_math_optimizations,
+                        options::OPT_fno_unsafe_math_optimizations);
 
-  if (!A || A->getOption().getID() == options::OPT_fno_fast_math ||
-      A->getOption().getID() == options::OPT_fno_unsafe_math_optimizations)
-    return false;
-
+    if (!A || A->getOption().getID() == options::OPT_fno_fast_math ||
+        A->getOption().getID() == options::OPT_fno_unsafe_math_optimizations)
+      return false;
+  }
   // If crtfastmath.o exists add it to the arguments.
   std::string Path = GetFilePath("crtfastmath.o");
   if (Path == "crtfastmath.o") // Not found.

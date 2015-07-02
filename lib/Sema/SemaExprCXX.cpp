@@ -2206,8 +2206,7 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
     return true;
   }
 
-  // Look for a global declaration.
-  Operator = FindUsualDeallocationFunction(StartLoc, true, Name);
+  Operator = 0;
   return false;
 }
 
@@ -2357,7 +2356,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
         // Otherwise, the usual operator delete[] should be the
         // function we just found.
-        else if (isa<CXXMethodDecl>(OperatorDelete))
+        else if (OperatorDelete && isa<CXXMethodDecl>(OperatorDelete))
           UsualArrayDeleteWantsSize = (OperatorDelete->getNumParams() == 2);
       }
 
@@ -6621,17 +6620,16 @@ static inline bool VariableCanNeverBeAConstantExpression(VarDecl *Var,
   assert(DefVD);
   if (DefVD->isWeak()) return false;
   EvaluatedStmt *Eval = DefVD->ensureEvaluatedStmt();
-  
+
   Expr *Init = cast<Expr>(Eval->Value);
 
   if (Var->getType()->isDependentType() || Init->isValueDependent()) {
-    if (!Init->isValueDependent())
-      return !DefVD->checkInitIsICE();
-    // FIXME: We might still be able to do some analysis of Init here
-    // to conclude that even in a dependent setting, Init can never
-    // be a constexpr - but for now admit agnosticity.
+    // FIXME: Teach the constant evaluator to deal with the non-dependent parts
+    // of value-dependent expressions, and use it here to determine whether the
+    // initializer is a potential constant expression.
     return false;
-  } 
+  }
+
   return !IsVariableAConstantExpression(Var, Context); 
 }
 
@@ -6713,13 +6711,30 @@ static void CheckLambdaCaptures(Expr *const FE,
 
 ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
                                      bool DiscardedValue,
-                                     bool IsConstexpr) {
+                                     bool IsConstexpr, 
+                                     bool IsLambdaInitCaptureInitializer) {
   ExprResult FullExpr = Owned(FE);
 
   if (!FullExpr.get())
     return ExprError();
-
-  if (DiagnoseUnexpandedParameterPack(FullExpr.get()))
+ 
+  // If we are an init-expression in a lambdas init-capture, we should not 
+  // diagnose an unexpanded pack now (will be diagnosed once lambda-expr 
+  // containing full-expression is done).
+  // template<class ... Ts> void test(Ts ... t) {
+  //   test([&a(t)]() { <-- (t) is an init-expr that shouldn't be diagnosed now.
+  //     return a;
+  //   }() ...);
+  // }
+  // FIXME: This is a hack. It would be better if we pushed the lambda scope
+  // when we parse the lambda introducer, and teach capturing (but not
+  // unexpanded pack detection) to walk over LambdaScopeInfos which don't have a
+  // corresponding class yet (that is, have LambdaScopeInfo either represent a
+  // lambda where we've entered the introducer but not the body, or represent a
+  // lambda where we've entered the body, depending on where the
+  // parser/instantiation has got to).
+  if (!IsLambdaInitCaptureInitializer && 
+      DiagnoseUnexpandedParameterPack(FullExpr.get()))
     return ExprError();
 
   // Top-level expressions default to 'id' when we're in a debugger.
@@ -6742,9 +6757,9 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
 
   CheckCompletedExpr(FullExpr.get(), CC, IsConstexpr);
 
-  // At the end of this full expression (which could be a deeply nested lambda),
-  // if there is a potential capture within the nested lambda, have the outer 
-  // capture-able lambda try and capture it.
+  // At the end of this full expression (which could be a deeply nested 
+  // lambda), if there is a potential capture within the nested lambda, 
+  // have the outer capture-able lambda try and capture it.
   // Consider the following code:
   // void f(int, int);
   // void f(const int&, double);
@@ -6767,14 +6782,29 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
   //     };
   //   }
   // 
-  //   Here, we see +n, and then the full-expression 0; ends, so we don't capture n 
-  //   (and instead remove it from our list of potential captures), and then the 
-  //   full-expression +n + ({ 0; }); ends, but it's too late for us to see that 
-  //   we need to capture n after all.
+  // Here, we see +n, and then the full-expression 0; ends, so we don't 
+  // capture n (and instead remove it from our list of potential captures), 
+  // and then the full-expression +n + ({ 0; }); ends, but it's too late 
+  // for us to see that we need to capture n after all.
 
-  LambdaScopeInfo *const CurrentLSI = getCurLambda(); 
-  if (CurrentLSI && CurrentLSI->hasPotentialCaptures() && 
-      !FullExpr.isInvalid())
+  LambdaScopeInfo *const CurrentLSI = getCurLambda();
+  // FIXME: PR 17877 showed that getCurLambda() can return a valid pointer 
+  // even if CurContext is not a lambda call operator. Refer to that Bug Report
+  // for an example of the code that might cause this asynchrony.  
+  // By ensuring we are in the context of a lambda's call operator
+  // we can fix the bug (we only need to check whether we need to capture
+  // if we are within a lambda's body); but per the comments in that 
+  // PR, a proper fix would entail :
+  //   "Alternative suggestion:
+  //   - Add to Sema an integer holding the smallest (outermost) scope 
+  //     index that we are *lexically* within, and save/restore/set to 
+  //     FunctionScopes.size() in InstantiatingTemplate's 
+  //     constructor/destructor.
+  //  - Teach the handful of places that iterate over FunctionScopes to 
+  //    stop at the outermost enclosing lexical scope." 
+  const bool IsInLambdaDeclContext = isLambdaCallOperator(CurContext); 
+  if (IsInLambdaDeclContext && CurrentLSI && 
+      CurrentLSI->hasPotentialCaptures() && !FullExpr.isInvalid())
     CheckLambdaCaptures(FE, CurrentLSI, *this);
   return MaybeCreateExprWithCleanups(FullExpr);
 }
