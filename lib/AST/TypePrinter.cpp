@@ -674,6 +674,9 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     case CC_X86ThisCall:
       OS << " __attribute__((thiscall))";
       break;
+    case CC_X86VectorCall:
+      OS << " __attribute__((vectorcall))";
+      break;
     case CC_X86Pascal:
       OS << " __attribute__((pascal))";
       break;
@@ -1269,6 +1272,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case AttributedType::attr_fastcall: OS << "fastcall"; break;
   case AttributedType::attr_stdcall: OS << "stdcall"; break;
   case AttributedType::attr_thiscall: OS << "thiscall"; break;
+  case AttributedType::attr_vectorcall: OS << "vectorcall"; break;
   case AttributedType::attr_pascal: OS << "pascal"; break;
   case AttributedType::attr_ms_abi: OS << "ms_abi"; break;
   case AttributedType::attr_sysv_abi: OS << "sysv_abi"; break;
@@ -1462,18 +1466,6 @@ PrintTemplateArgumentList(raw_ostream &OS,
   OS << '>';
 }
 
-void QualType::dump(const char *msg) const {
-  if (msg)
-    llvm::errs() << msg << ": ";
-  LangOptions LO;
-  print(llvm::errs(), PrintingPolicy(LO), "identifier");
-  llvm::errs() << '\n';
-}
-
-LLVM_DUMP_METHOD void QualType::dump() const { dump(nullptr); }
-
-LLVM_DUMP_METHOD void Type::dump() const { QualType(this, 0).dump(); }
-
 std::string Qualifiers::getAsString() const {
   LangOptions LO;
   return getAsString(PrintingPolicy(LO));
@@ -1531,6 +1523,9 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
         break;
       case LangAS::opencl_constant:
         OS << "__constant";
+        break;
+      case LangAS::opencl_generic:
+        OS << "__generic";
         break;
       default:
         OS << "__attribute__((address_space(";
