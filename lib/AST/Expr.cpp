@@ -2920,8 +2920,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case CXXThisExprClass:
   case CXXScalarValueInitExprClass:
   case TypeTraitExprClass:
-  case UnaryTypeTraitExprClass:
-  case BinaryTypeTraitExprClass:
   case ReflectionTypeTraitExprClass:
   case ArrayTypeTraitExprClass:
   case ExpressionTraitExprClass:
