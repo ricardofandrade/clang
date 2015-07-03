@@ -1,8 +1,4 @@
 // RUN: %clang_cc1 -verify -std=c++11 %s
-<<<<<<< HEAD
-// expected-no-diagnostics
-=======
->>>>>>> origin/release_35
 template<typename T>
 void f0() {
   struct X;

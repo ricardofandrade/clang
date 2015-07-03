@@ -1609,8 +1609,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       TagOrTempResult = Actions.ActOnClassTemplateSpecialization(
           getCurScope(), TagType, TUK, StartLoc, DS.getModulePrivateSpecLoc(),
           *TemplateId, attrs.getList(),
-          DS.getFriendSpecLoc(),
-          DS.getFriendUsingSpecLoc(),
           MultiTemplateParamsArg(TemplateParams ? &(*TemplateParams)[0]
                                                 : nullptr,
                                  TemplateParams ? TemplateParams->size() : 0));
@@ -1636,7 +1634,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
     TagOrTempResult =
       Actions.ActOnTemplatedFriendTag(getCurScope(), DS.getFriendSpecLoc(),
-                                      DS.getFriendUsingSpecLoc(),
                                       TagType, StartLoc, SS,
                                       Name, NameLoc, attrs.getList(),
                                       MultiTemplateParamsArg(
@@ -1671,7 +1668,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                                        SS, Name, NameLoc, attrs.getList(), AS,
                                        DS.getModulePrivateSpecLoc(),
                                        TParams, Owned, IsDependent,
-                                       SourceLocation(), SourceLocation(),
                                        SourceLocation(), false,
                                        clang::TypeResult(),
                                        DSC == DSC_type_specifier);

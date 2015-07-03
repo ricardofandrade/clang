@@ -609,9 +609,7 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
       return nullptr;
 
     FriendDecl *FD = SemaRef.CheckFriendTypeDecl(D->getLocStart(),
-                                                 D->getFriendLoc(),
-                                                 D->getFriendUsingLoc(),
-                                                 InstTy);
+                                                 D->getFriendLoc(), InstTy);
     if (!FD)
       return nullptr;
 
@@ -633,7 +631,7 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
 
   FriendDecl *FD =
     FriendDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                       cast<NamedDecl>(NewND), D->getFriendLoc(), D->getFriendUsingLoc());
+                       cast<NamedDecl>(NewND), D->getFriendLoc());
   FD->setAccess(AS_public);
   FD->setUnsupportedFriend(D->isUnsupportedFriend());
   Owner->addDecl(FD);

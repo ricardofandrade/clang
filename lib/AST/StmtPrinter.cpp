@@ -1984,20 +1984,6 @@ static const char *getExpressionTraitName(ExpressionTrait ET) {
   llvm_unreachable("Expression type trait not covered by switch");
 }
 
-void StmtPrinter::VisitUnaryTypeTraitExpr(UnaryTypeTraitExpr *E) {
-  OS << getTypeTraitName(E->getTrait()) << '(';
-  E->getQueriedType().print(OS, Policy);
-  OS << ')';
-}
-
-void StmtPrinter::VisitBinaryTypeTraitExpr(BinaryTypeTraitExpr *E) {
-  OS << getTypeTraitName(E->getTrait()) << '(';
-  E->getLhsType().print(OS, Policy);
-  OS << ',';
-  E->getRhsType().print(OS, Policy);
-  OS << ')';
-}
-
 void StmtPrinter::VisitReflectionTypeTraitExpr(ReflectionTypeTraitExpr *E) {
   OS << getTypeTraitName(E->getTrait()) << '(';
   E->getQueriedType().print(OS, Policy);

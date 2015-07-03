@@ -688,8 +688,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::MSPropertyRefExprClass:
     case Stmt::CXXUnresolvedConstructExprClass:
     case Stmt::DependentScopeDeclRefExprClass:
-    case Stmt::UnaryTypeTraitExprClass:
-    case Stmt::BinaryTypeTraitExprClass:
     case Expr::ReflectionTypeTraitExprClass:
     case Stmt::TypeTraitExprClass:
     case Stmt::ArrayTypeTraitExprClass:

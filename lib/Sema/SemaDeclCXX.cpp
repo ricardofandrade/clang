@@ -5118,27 +5118,9 @@ struct SpecialMemberDeletionInfo {
 
   /// Look up the corresponding special member in the given class.
   Sema::SpecialMemberOverloadResult *lookupIn(CXXRecordDecl *Class,
-<<<<<<< HEAD
-                                              unsigned Quals) {
-    unsigned TQ = MD->getTypeQualifiers();
-    // cv-qualifiers on class members don't affect default ctor / dtor calls.
-    if (CSM == Sema::CXXDefaultConstructor || CSM == Sema::CXXDestructor)
-      Quals = 0;
-    // cv-qualifiers on class members affect the type of both '*this' and the
-    // argument for an assignment.
-    if (IsAssignment)
-      TQ |= Quals;
-    return S.LookupSpecialMember(Class, CSM,
-                                 ConstArg || (Quals & Qualifiers::Const),
-                                 VolatileArg || (Quals & Qualifiers::Volatile),
-                                 MD->getRefQualifier() == RQ_RValue,
-                                 TQ & Qualifiers::Const,
-                                 TQ & Qualifiers::Volatile);
-=======
                                               unsigned Quals, bool IsMutable) {
     return lookupCallFromSpecialMember(S, Class, CSM, Quals,
                                        ConstArg && !IsMutable);
->>>>>>> origin/release_35
   }
 
   typedef llvm::PointerUnion<CXXBaseSpecifier*, FieldDecl*> Subobject;
@@ -11563,7 +11545,6 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
 /// \returns A friend declaration that.
 FriendDecl *Sema::CheckFriendTypeDecl(SourceLocation LocStart,
                                       SourceLocation FriendLoc,
-                                      SourceLocation FriendUsingLoc,
                                       TypeSourceInfo *TSInfo) {
   assert(TSInfo && "NULL TypeSourceInfo for friend type declaration");
   
@@ -11627,19 +11608,14 @@ FriendDecl *Sema::CheckFriendTypeDecl(SourceLocation LocStart,
   //   If the type specifier in a friend declaration designates a (possibly
   //   cv-qualified) class type, that class is declared as a friend; otherwise,
   //   the friend declaration is ignored.
-<<<<<<< HEAD
-  return FriendDecl::Create(Context, CurContext, LocStart, TSInfo, FriendLoc, FriendUsingLoc);
-=======
   return FriendDecl::Create(Context, CurContext,
                             TSInfo->getTypeLoc().getLocStart(), TSInfo,
                             FriendLoc);
->>>>>>> origin/release_35
 }
 
 /// Handle a friend tag declaration where the scope specifier was
 /// templated.
 Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
-                                    SourceLocation FriendUsingLoc,
                                     unsigned TagSpec, SourceLocation TagLoc,
                                     CXXScopeSpec &SS,
                                     IdentifierInfo *Name,
@@ -11663,9 +11639,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
       return CheckClassTemplate(S, TagSpec, TUK_Friend, TagLoc, SS, Name,
                                 NameLoc, Attr, TemplateParams, AS_public,
                                 /*ModulePrivateLoc=*/SourceLocation(),
-                                FriendLoc,
-                                FriendUsingLoc,
-                                TempParamLists.size() - 1,
+                                FriendLoc, TempParamLists.size() - 1,
                                 TempParamLists.data()).get();
     } else {
       // The "template<>" header is extraneous.
@@ -11697,12 +11671,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
       return ActOnTag(S, TagSpec, TUK_Friend, TagLoc, SS, Name, NameLoc,
                       Attr, AS_public,
                       /*ModulePrivateLoc=*/SourceLocation(),
-<<<<<<< HEAD
-                      MultiTemplateParamsArg(), Owned, IsDependent, 
-                      FriendLoc, FriendUsingLoc,
-=======
                       MultiTemplateParamsArg(), Owned, IsDependent,
->>>>>>> origin/release_35
                       /*ScopedEnumKWLoc=*/SourceLocation(),
                       /*ScopedEnumUsesClassTag=*/false,
                       /*UnderlyingType=*/TypeResult(),
@@ -11732,8 +11701,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
     }
 
     FriendDecl *Friend = FriendDecl::Create(Context, CurContext, NameLoc,
-                                            TSI, FriendLoc, FriendUsingLoc,
-                                            TempParamLists);
+                                            TSI, FriendLoc, TempParamLists);
     Friend->setAccess(AS_public);
     CurContext->addDecl(Friend);
     return Friend;
@@ -11757,8 +11725,7 @@ Decl *Sema::ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
   TL.setNameLoc(NameLoc);
 
   FriendDecl *Friend = FriendDecl::Create(Context, CurContext, NameLoc,
-                                          TSI, FriendLoc, FriendUsingLoc,
-                                          TempParamLists);
+                                          TSI, FriendLoc, TempParamLists);
   Friend->setAccess(AS_public);
   Friend->setUnsupportedFriend(true);
   CurContext->addDecl(Friend);
@@ -11841,7 +11808,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
                                    TSI,
                                    DS.getFriendSpecLoc());
   else
-    D = CheckFriendTypeDecl(Loc, DS.getFriendSpecLoc(), DS.getFriendUsingSpecLoc(), TSI);
+    D = CheckFriendTypeDecl(Loc, DS.getFriendSpecLoc(), TSI);
   
   if (!D)
     return nullptr;
@@ -11879,15 +11846,6 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     // appropriate declaration.
     return nullptr;
   }
-
-
-  // C.K.
-  // "friend using" extension only works with class types!
-  if (DS.isFriendUsingSpecified()) {
-    Diag(Loc, diag::err_friend_using_without_class_type);
-    return 0;
-  }
-
 
   // C++ [namespace.memdef]p3
   //  - If a friend declaration in a non-local class first declares a
@@ -12132,8 +12090,7 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
 
   FriendDecl *FrD = FriendDecl::Create(Context, CurContext,
                                        D.getIdentifierLoc(), ND,
-                                       DS.getFriendSpecLoc(),
-                                       DS.getFriendUsingSpecLoc());
+                                       DS.getFriendSpecLoc());
   FrD->setAccess(AS_public);
   CurContext->addDecl(FrD);
 

@@ -663,13 +663,8 @@ public:
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-<<<<<<< HEAD
-                            llvm::opt::ArgStringList &CC1Args) const;
-  virtual void
-=======
                             llvm::opt::ArgStringList &CC1Args) const override;
   void
->>>>>>> origin/release_35
   AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                llvm::opt::ArgStringList &CC1Args) const override;
   bool isPIEDefault() const override;

@@ -880,19 +880,6 @@ bool DeclSpec::SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
   return false;
 }
 
-bool DeclSpec::SetFriendUsingSpec(SourceLocation Loc, const char *&PrevSpec,
-  unsigned &DiagID) {
-    if (Friend_using_specified) {
-      PrevSpec = "using";
-      DiagID = diag::ext_duplicate_declspec;
-      return true;
-    }
-
-    Friend_using_specified = true;
-    FriendUsingLoc = Loc;   // has to be after 'friend'
-    return false;
-}
-
 bool DeclSpec::setModulePrivateSpec(SourceLocation Loc, const char *&PrevSpec,
                                     unsigned &DiagID) {
   if (isModulePrivateSpecified()) {

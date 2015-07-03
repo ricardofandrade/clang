@@ -4768,7 +4768,7 @@ ExprResult Sema::BuildArrayTypeTrait(ArrayTypeTrait ATT,
   // FIXME: This should likely be tracked as an APInt to remove any host
   // assumptions about the width of size_t on the target.
   uint64_t Value = 0;
-  if (!T->isDependentType() && (!DimExpr || !DimExpr->isValueDependent()))
+  if (!T->isDependentType())
     Value = EvaluateArrayTypeTrait(*this, ATT, T, DimExpr, KWLoc);
 
   // While the specification for these traits from the Embarcadero C++
@@ -6694,11 +6694,7 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
                                      bool DiscardedValue,
                                      bool IsConstexpr, 
                                      bool IsLambdaInitCaptureInitializer) {
-<<<<<<< HEAD
-  ExprResult FullExpr = Owned(FE);
-=======
   ExprResult FullExpr = FE;
->>>>>>> origin/release_35
 
   if (!FullExpr.get())
     return ExprError();

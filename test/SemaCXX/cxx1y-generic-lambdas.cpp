@@ -912,8 +912,4 @@ int run2 = x2.fooG3();
 
 
 
-<<<<<<< HEAD
 } //end ns inclass_lambdas_within_nested_classes
-=======
-} //end ns inclass_lambdas_within_nested_classes
->>>>>>> origin/release_35

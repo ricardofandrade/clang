@@ -2765,110 +2765,12 @@ static ExpressionTrait ExpressionTraitFromTokKind(tok::TokenKind kind) {
   }
 }
 
-static ReflectionTypeTrait ReflectionTypeTraitFromTokKind(tok::TokenKind kind) {
-  switch(kind) {
+static unsigned TypeTraitArity(tok::TokenKind kind) {
+  switch (kind) {
     default: llvm_unreachable("Not a known type trait");
 #define TYPE_TRAIT(N,Spelling,K) case tok::kw_##Spelling: return N;
 #include "clang/Basic/TokenKinds.def"
-  case tok::kw___enumerator_list_size:             return RTT_EnumeratorListSize;
-  case tok::kw___enumerator_value:                 return RTT_EnumeratorValue;
-  case tok::kw___enumerator_identifier:            return RTT_EnumeratorIdentifier;
-
-  case tok::kw___enum_minimum_value:               return RTT_EnumMinimumValue;
-  case tok::kw___enum_maximum_value:               return RTT_EnumMaximumValue;
-  case tok::kw___enum_value_dup_count:             return RTT_EnumValueDupCount;
-  case tok::kw___enum_has_gaps_in_value_range:     return RTT_EnumHasGapsInValueRange;
-  case tok::kw___enum_value_monotonicity:          return RTT_EnumValueMonotonicity;
-  case tok::kw___enum_value_pop_count:             return RTT_EnumValuePopCount;
-
-  case tok::kw___type_canonical_name:              return RTT_TypeCanonicalName;
-  case tok::kw___type_sugared_name:                return RTT_TypeSugaredName;
-  case tok::kw___type_is_unnamed:                  return RTT_TypeIsUnnamed;
-
-  case tok::kw___record_base_access_spec:          return RTT_RecordBaseAccessSpec;
-  case tok::kw___record_base_count:                return RTT_RecordBaseCount;
-  case tok::kw___record_base_is_virtual:           return RTT_RecordBaseIsVirtual;
-  case tok::kw___record_virtual_base_count:        return RTT_RecordVirtualBaseCount;
-
-  case tok::kw___record_member_field_count:        return RTT_RecordMemberFieldCount;
-  case tok::kw___record_member_field_ptr:          return RTT_RecordMemberFieldPtr;
-  case tok::kw___object_member_field_ref:          return RTT_ObjectMemberFieldRef;
-  case tok::kw___record_member_field_identifier:   return RTT_RecordMemberFieldIdentifier;
-  case tok::kw___record_member_field_access_spec:  return RTT_RecordMemberFieldAccessSpec;
-  case tok::kw___record_member_field_is_mutable:   return RTT_RecordMemberFieldIsMutable;
-  case tok::kw___record_member_field_is_bit_field: return RTT_RecordMemberFieldIsBitField;
-  case tok::kw___record_member_field_bit_field_size: return RTT_RecordMemberFieldBitFieldSize;
-  case tok::kw___record_member_field_is_anon_bit_field: return RTT_RecordMemberFieldIsAnonBitField;
-  case tok::kw___record_member_field_is_reference: return RTT_RecordMemberFieldIsReference;
-
   }
-}
-
-
-/// ParseUnaryTypeTrait - Parse the built-in unary type-trait
-/// pseudo-functions that allow implementation of the TR1/C++0x type traits
-/// templates.
-///
-///       primary-expression:
-/// [GNU]             unary-type-trait '(' type-id ')'
-///
-ExprResult Parser::ParseUnaryTypeTrait() {
-  UnaryTypeTrait UTT = UnaryTypeTraitFromTokKind(Tok.getKind());
-  SourceLocation Loc = ConsumeToken();
-
-  BalancedDelimiterTracker T(*this, tok::l_paren);
-  if (T.expectAndConsume(diag::err_expected_lparen))
-    return ExprError();
-
-  // FIXME: Error reporting absolutely sucks! If the this fails to parse a type
-  // there will be cryptic errors about mismatched parentheses and missing
-  // specifiers.
-  TypeResult Ty = ParseTypeName();
-
-  T.consumeClose();
-
-  if (Ty.isInvalid())
-    return ExprError();
-
-  return Actions.ActOnUnaryTypeTrait(UTT, Loc, Ty.get(), T.getCloseLocation());
-}
-
-/// ParseBinaryTypeTrait - Parse the built-in binary type-trait
-/// pseudo-functions that allow implementation of the TR1/C++0x type traits
-/// templates.
-///
-///       primary-expression:
-/// [GNU]             binary-type-trait '(' type-id ',' type-id ')'
-///
-ExprResult Parser::ParseBinaryTypeTrait() {
-  BinaryTypeTrait BTT = BinaryTypeTraitFromTokKind(Tok.getKind());
-  SourceLocation Loc = ConsumeToken();
-
-  BalancedDelimiterTracker T(*this, tok::l_paren);
-  if (T.expectAndConsume(diag::err_expected_lparen))
-    return ExprError();
-
-  TypeResult LhsTy = ParseTypeName();
-  if (LhsTy.isInvalid()) {
-    SkipUntil(tok::r_paren, StopAtSemi);
-    return ExprError();
-  }
-
-  if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
-    SkipUntil(tok::r_paren, StopAtSemi);
-    return ExprError();
-  }
-
-  TypeResult RhsTy = ParseTypeName();
-  if (RhsTy.isInvalid()) {
-    SkipUntil(tok::r_paren, StopAtSemi);
-    return ExprError();
-  }
-
-  T.consumeClose();
-
-  return Actions.ActOnBinaryTypeTrait(BTT, Loc, LhsTy.get(), RhsTy.get(),
-                                      T.getCloseLocation());
 }
 
 /// ParseReflectionTrait - Parse ....

@@ -123,7 +123,6 @@ namespace destructors {
     if (coin() && (coin() || coin() || check(Dtor()))) {
       Dtor();
     }
-#endif
   }
 
 #ifdef TEMPORARY_DTORS
@@ -173,12 +172,9 @@ namespace destructors {
   // PR16664 and PR18159
   void testConsistencyNested(int i) {
     extern bool compute(bool);
-  
+
     if (i == 5 && (i == 4 || i == 5 || check(NoReturnDtor())))
-      clang_analyzer_eval(true); // expected TRUE
-  
-    if (i == 5 && (i == 4 || i == 5 || check(NoReturnDtor())))
-      clang_analyzer_eval(true);  // expected TRUE
+      clang_analyzer_eval(true);  // expected-warning{{TRUE}}
 
     if (i == 5 && (i == 4 || i == 5 || check(NoReturnDtor())))
       clang_analyzer_eval(true);  // expected-warning{{TRUE}}

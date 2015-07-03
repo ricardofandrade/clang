@@ -2130,10 +2130,6 @@ DEF_TRAVERSE_STMT(CXXUuidofExpr, {
     TRY_TO(TraverseTypeLoc(S->getTypeOperandSourceInfo()->getTypeLoc()));
 })
 
-DEF_TRAVERSE_STMT(ReflectionTypeTraitExpr, {
-    TRY_TO(TraverseTypeLoc(S->getQueriedTypeSourceInfo()->getTypeLoc()));
-  })
-
 DEF_TRAVERSE_STMT(TypeTraitExpr, {
   for (unsigned I = 0, N = S->getNumArgs(); I != N; ++I)
     TRY_TO(TraverseTypeLoc(S->getArg(I)->getTypeLoc()));

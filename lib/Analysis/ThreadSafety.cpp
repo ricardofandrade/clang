@@ -264,11 +264,6 @@ private:
     return ME ? ME->isArrow() : false;
   }
 
-  inline bool isCalleeArrow(const Expr *E) {
-    const MemberExpr *ME = dyn_cast<MemberExpr>(E->IgnoreParenCasts());
-    return ME ? ME->isArrow() : false;
-  }
-
   /// Build an SExpr from the given C++ expression.
   /// Recursive function that terminates on DeclRefExpr.
   /// Note: this function merely creates a SExpr; it does not check to

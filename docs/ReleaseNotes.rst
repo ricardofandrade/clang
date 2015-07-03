@@ -20,36 +20,23 @@ documentation <http://llvm.org/docs/ReleaseNotes.html>`_. All LLVM
 releases may be downloaded from the `LLVM releases web
 site <http://llvm.org/releases/>`_.
 
-For more information about Clang or LLVM, including information about the
-latest release, please check out the main `Clang Web Site
-<http://clang.llvm.org>`_ or the `LLVM Web Site <http://llvm.org>`_.
+For more information about Clang or LLVM, including information about
+the latest release, please check out the main please see the `Clang Web
+Site <http://clang.llvm.org>`_ or the `LLVM Web
+Site <http://llvm.org>`_.
 
-Note that if you are reading this file from a Subversion checkout or the main
-Clang web page, this document applies to the *next* release, not the current
-one. To see the release notes for a specific release, please see the `releases
-page <http://llvm.org/releases/>`_.
-
-What's New in Clang 3.4.2?
-==========================
-
-* Build fix for gcc 4.9.
-
-* Added missing addrspacecast support.
-
-What's New in Clang 3.4.1?
-==========================
-
-* Various bug fixes for AArch64, ARM, and PowerPC targets
-
-* C++11 fixes
+Note that if you are reading this file from a Subversion checkout or the
+main Clang web page, this document applies to the *next* release, not
+the current one. To see the release notes for a specific release, please
+see the `releases page <http://llvm.org/releases/>`_.
 
 What's New in Clang 3.5?
 ========================
 
-Some of the major new features and improvements to Clang are listed here.
-Generic improvements to Clang as a whole or to its underlying infrastructure
-are described first, followed by language-specific sections with improvements
-to Clang's support for those languages.
+Some of the major new features and improvements to Clang are listed
+here. Generic improvements to Clang as a whole or to its underlying
+infrastructure are described first, followed by language-specific
+sections with improvements to Clang's support for those languages.
 
 Major New Features
 ------------------
@@ -83,59 +70,75 @@ about them. The improvements since the 3.4 release include:
 - GCC compatibility: Clang displays a warning on unsupported gcc
   optimization flags instead of an error.
 
+- Remarks system: Clang supports `-R` flags for enabling remarks. These are
+  diagnostic messages that provide information about the compilation process,
+  but don't suggest that a problem has been detected. As such, they cannot
+  be upgraded to errors with `-Werror` or `-Rerror`. A `-Reverything` flag
+  is provided (paralleling `-Weverything`) to turn on all remarks.
 
-- -Wloop-analysis now warns on for-loops which have the same increment or
-  decrement in the loop header as the last statement in the loop.
+- New remark `-Rpass`: Clang provides information about decisions made by
+  optimization passes during compilation. See :ref:`opt_rpass`.
+
+- New warning `-Wabsolute-value`: Clang warns about incorrect or useless usage
+  of the absolute functions (`abs`, `fabsf`, etc).
 
   .. code-block:: c
 
-    void foo(char *a, char *b, unsigned c) {
-	  for (unsigned i = 0; i < c; ++i) {
-		a[i] = b[i];
-		++i;
-	  }
+    #include <stdlib.h>
+    void foo() {
+     unsigned int i=0;
+     abs(i);
     }
 
   returns
-  `warning: variable 'i' is incremented both in the loop header and in the loop body [-Wloop-analysis]`
+  `warning: taking the absolute value of unsigned type 'unsigned int' has no effect [-Wabsolute-value]`
 
-- -Wuninitialized now performs checking across field initializers to detect
-  when one field in used uninitialized in another field initialization.
+  or
+
+  .. code-block:: c
+
+    #include <stdlib.h>
+    void plop() {
+      long long i=0;
+      abs(i);
+    }
+
+  returns
+  `warning: absolute value function 'abs' given an argument of type 'long long' but has parameter of type 'int' which may cause truncation of value [-Wabsolute-value] use function 'llabs' instead`
+
+- New warning `-Wtautological-pointer-compare`:
 
   .. code-block:: c++
 
-    class A {
-      int x;
-      int y;
-      A() : x(y) {}
-    };
+    #include <stddef.h>
+    void foo() {
+     int arr[5];
+     int x;
+     // warn on these conditionals
+     if (foo);
+     if (arr);
+     if (&x);
+     if (foo == NULL);
+     if (arr == NULL);
+     if (&x == NULL);
+    }
 
   returns
-  `warning: field 'y' is uninitialized when used here [-Wuninitialized]`
+  `warning: comparison of address of 'x' equal to a null pointer is always false [-Wtautological-pointer-compare]`
 
-- Clang can detect initializer list use inside a macro and suggest parentheses
-  if possible to fix.
-- Many improvements to Clang's typo correction facilities, such as:
+- New warning `-Wtautological-undefined-compare`: 
 
-  + Adding global namespace qualifiers so that corrections can refer to shadowed
-    or otherwise ambiguous or unreachable namespaces.
-  + Including accessible class members in the set of typo correction candidates,
-    so that corrections requiring a class name in the name specifier are now
-    possible.
-  + Allowing typo corrections that involve removing a name specifier.
-  + In some situations, correcting function names when a function was given the
-    wrong number of arguments, including situations where the original function
-    name was correct but was shadowed by a lexically closer function with the
-    same name yet took a different number of arguments.
-  + Offering typo suggestions for 'using' declarations.
-  + Providing better diagnostics and fixit suggestions in more situations when
-    a '->' was used instead of '.' or vice versa.
-  + Providing more relevant suggestions for typos followed by '.' or '='.
-  + Various performance improvements when searching for typo correction
-    candidates.
+  .. code-block:: c++
 
-- `LeakSanitizer <LeakSanitizer.html>`_ is an experimental memory leak detector
-  which can be combined with AddressSanitizer.
+    #include <stddef.h>
+    void f(int &x) {
+       if (&x == nullptr) { }
+    }
+
+  returns
+  `warning: reference cannot be bound to dereferenced null pointer in well-defined C++ code; comparison may be assumed to always evaluate to false [-Wtautological-undefined-compare]`
+
+-  ...
 
 New Compiler Flags
 ------------------

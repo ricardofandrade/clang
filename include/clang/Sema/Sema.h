@@ -1789,14 +1789,11 @@ public:
                  SourceLocation ModulePrivateLoc,
                  MultiTemplateParamsArg TemplateParameterLists,
                  bool &OwnedDecl, bool &IsDependent,
-                 SourceLocation FriendLoc,
-                 SourceLocation FriendUsingLoc,
                  SourceLocation ScopedEnumKWLoc,
                  bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
                  bool IsTypeSpecifier);
 
   Decl *ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
-                                SourceLocation FriendUsingLoc,
                                 unsigned TagSpec, SourceLocation TagLoc,
                                 CXXScopeSpec &SS,
                                 IdentifierInfo *Name, SourceLocation NameLoc,
@@ -4364,32 +4361,6 @@ public:
   ExprResult BuildCXXNoexceptExpr(SourceLocation KeyLoc, Expr *Operand,
                                   SourceLocation RParen);
 
-  /// ActOnUnaryTypeTrait - Parsed one of the unary type trait support
-  /// pseudo-functions.
-  ExprResult ActOnUnaryTypeTrait(UnaryTypeTrait OTT,
-                                 SourceLocation KWLoc,
-                                 ParsedType Ty,
-                                 SourceLocation RParen);
-
-  ExprResult BuildUnaryTypeTrait(UnaryTypeTrait OTT,
-                                 SourceLocation KWLoc,
-                                 TypeSourceInfo *T,
-                                 SourceLocation RParen);
-
-  /// ActOnBinaryTypeTrait - Parsed one of the bianry type trait support
-  /// pseudo-functions.
-  ExprResult ActOnBinaryTypeTrait(BinaryTypeTrait OTT,
-                                  SourceLocation KWLoc,
-                                  ParsedType LhsTy,
-                                  ParsedType RhsTy,
-                                  SourceLocation RParen);
-
-  ExprResult BuildBinaryTypeTrait(BinaryTypeTrait BTT,
-                                  SourceLocation KWLoc,
-                                  TypeSourceInfo *LhsT,
-                                  TypeSourceInfo *RhsT,
-                                  SourceLocation RParen);
-
   /// ActOnReflectionTypeTrait - Parsed one of the experimental
   /// reflection type trait support pseudo-functions.
   ExprResult ActOnReflectionTypeTrait(ReflectionTypeTrait RTT,
@@ -5006,7 +4977,6 @@ public:
 
   FriendDecl *CheckFriendTypeDecl(SourceLocation LocStart,
                                   SourceLocation FriendLoc,
-                                  SourceLocation FriendUsingLoc,
                                   TypeSourceInfo *TSInfo);
   Decl *ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
                             MultiTemplateParamsArg TemplateParams);
@@ -5313,7 +5283,6 @@ public:
                                 AccessSpecifier AS,
                                 SourceLocation ModulePrivateLoc,
                                 SourceLocation FriendLoc,
-                                SourceLocation FriendUsingLoc,
                                 unsigned NumOuterTemplateParamLists,
                             TemplateParameterList **OuterTemplateParamLists);
 
@@ -5388,8 +5357,6 @@ public:
                                    SourceLocation ModulePrivateLoc,
                                    TemplateIdAnnotation &TemplateId,
                                    AttributeList *Attr,
-                                   SourceLocation FriendLoc,
-                                   SourceLocation FriendUsingLoc,
                                  MultiTemplateParamsArg TemplateParameterLists);
 
   Decl *ActOnTemplateDeclarator(Scope *S,

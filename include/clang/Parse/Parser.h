@@ -2463,11 +2463,7 @@ private:
   //===--------------------------------------------------------------------===//
   // C++11/G++: Type Traits [Type-Traits.html in the GCC manual]
   ExprResult ParseTypeTrait();
-
-  //===--------------------------------------------------------------------===//
-  // Experimental: Reflection Traits
-  ExprResult ParseReflectionTypeTrait();
-
+  
   //===--------------------------------------------------------------------===//
   // Embarcadero: Arary and Expression Traits
   ExprResult ParseArrayTypeTrait();

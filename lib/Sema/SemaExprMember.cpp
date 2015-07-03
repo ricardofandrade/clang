@@ -713,6 +713,11 @@ Sema::BuildMemberReferenceExpr(Expr *Base, QualType BaseType,
                                   false, ExtraArgs);
 }
 
+static ExprResult
+BuildFieldReferenceExpr(Sema &S, Expr *BaseExpr, bool IsArrow,
+                        const CXXScopeSpec &SS, FieldDecl *Field,
+                        DeclAccessPair FoundDecl,
+                        const DeclarationNameInfo &MemberNameInfo);
 
 ExprResult
 Sema::BuildAnonymousStructUnionMemberReference(const CXXScopeSpec &SS,
@@ -799,7 +804,7 @@ Sema::BuildAnonymousStructUnionMemberReference(const CXXScopeSpec &SS,
     // Make a nameInfo that properly uses the anonymous name.
     DeclarationNameInfo memberNameInfo(field->getDeclName(), loc);
     
-    result = BuildFieldReferenceExpr(result, baseObjectIsPointer,
+    result = BuildFieldReferenceExpr(*this, result, baseObjectIsPointer,
                                      EmptySS, field, foundDecl,
                                      memberNameInfo).get();
     if (!result)
@@ -819,7 +824,7 @@ Sema::BuildAnonymousStructUnionMemberReference(const CXXScopeSpec &SS,
     DeclAccessPair fakeFoundDecl =
         DeclAccessPair::make(field, field->getAccess());
 
-    result = BuildFieldReferenceExpr(result, /*isarrow*/ false,
+    result = BuildFieldReferenceExpr(*this, result, /*isarrow*/ false,
                                      (FI == FEnd? SS : EmptySS), field,
                                      fakeFoundDecl, memberNameInfo).get();
   }
@@ -1036,7 +1041,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     return ExprError();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl))
-    return BuildFieldReferenceExpr(BaseExpr, IsArrow,
+    return BuildFieldReferenceExpr(*this, BaseExpr, IsArrow,
                                    SS, FD, FoundDecl, MemberNameInfo);
 
   if (MSPropertyDecl *PD = dyn_cast<MSPropertyDecl>(MemberDecl))
@@ -1635,8 +1640,8 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
                                   NameInfo, TemplateArgs, &ExtraArgs);
 }
 
-ExprResult
-Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
+static ExprResult
+BuildFieldReferenceExpr(Sema &S, Expr *BaseExpr, bool IsArrow,
                         const CXXScopeSpec &SS, FieldDecl *Field,
                         DeclAccessPair FoundDecl,
                         const DeclarationNameInfo &MemberNameInfo) {
@@ -1674,20 +1679,20 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     if (Field->isMutable()) BaseQuals.removeConst();
 
     Qualifiers MemberQuals
-    = Context.getCanonicalType(MemberType).getQualifiers();
+    = S.Context.getCanonicalType(MemberType).getQualifiers();
 
     assert(!MemberQuals.hasAddressSpace());
 
 
     Qualifiers Combined = BaseQuals + MemberQuals;
     if (Combined != MemberQuals)
-      MemberType = Context.getQualifiedType(MemberType, Combined);
+      MemberType = S.Context.getQualifiedType(MemberType, Combined);
   }
 
-  UnusedPrivateFields.remove(Field);
+  S.UnusedPrivateFields.remove(Field);
 
   ExprResult Base =
-  PerformObjectMemberConversion(BaseExpr, SS.getScopeRep(),
+  S.PerformObjectMemberConversion(BaseExpr, SS.getScopeRep(),
                                   FoundDecl, Field);
   if (Base.isInvalid())
     return ExprError();

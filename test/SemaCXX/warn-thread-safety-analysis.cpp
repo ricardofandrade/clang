@@ -4326,11 +4326,7 @@ namespace NonMemberCalleeICETest {
 
 class A {
   void Run() {
-<<<<<<< HEAD
-  (RunHelper)();  // expected-warning {{calling function 'RunHelper' requires exclusive lock on 'M'}}
-=======
   (RunHelper)();  // expected-warning {{calling function 'RunHelper' requires holding mutex 'M' exclusively}}
->>>>>>> origin/release_35
  }
 
  void RunHelper() __attribute__((exclusive_locks_required(M)));

@@ -137,32 +137,6 @@ static void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     return;
   }
 
-<<<<<<< HEAD
-  // If there's an environment specified in the triple, that means we're dealing
-  // with an embedded variant of some sort and don't want the platform
-  // version-min defines, so only add them if there's not one.
-  if (Triple.getEnvironmentName().empty()) {
-    // Set the appropriate OS version define.
-    if (Triple.isiOS()) {
-      assert(Maj < 10 && Min < 100 && Rev < 100 && "Invalid version!");
-      char Str[6];
-      Str[0] = '0' + Maj;
-      Str[1] = '0' + (Min / 10);
-      Str[2] = '0' + (Min % 10);
-      Str[3] = '0' + (Rev / 10);
-      Str[4] = '0' + (Rev % 10);
-      Str[5] = '\0';
-      Builder.defineMacro("__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__",
-                          Str);
-    } else {
-      // Note that the Driver allows versions which aren't representable in the
-      // define (because we only get a single digit for the minor and micro
-      // revision numbers). So, we limit them to the maximum representable
-      // version.
-      assert(Triple.getEnvironmentName().empty() && "Invalid environment!");
-      assert(Maj < 100 && Min < 100 && Rev < 100 && "Invalid version!");
-      char Str[5];
-=======
   // Set the appropriate OS version define.
   if (Triple.isiOS()) {
     assert(Maj < 10 && Min < 100 && Rev < 100 && "Invalid version!");
@@ -183,16 +157,11 @@ static void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     assert(Maj < 100 && Min < 100 && Rev < 100 && "Invalid version!");
     char Str[7];
     if (Maj < 10 || (Maj == 10 && Min < 10)) {
->>>>>>> origin/release_35
       Str[0] = '0' + (Maj / 10);
       Str[1] = '0' + (Maj % 10);
       Str[2] = '0' + std::min(Min, 9U);
       Str[3] = '0' + std::min(Rev, 9U);
       Str[4] = '\0';
-<<<<<<< HEAD
-      Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
-    }
-=======
     } else {
       // Handle versions > 10.9.
       Str[0] = '0' + (Maj / 10);
@@ -204,7 +173,6 @@ static void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
       Str[6] = '\0';
     }
     Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
->>>>>>> origin/release_35
   }
 
   // Tell users about the kernel if there is one.
@@ -1352,12 +1320,7 @@ public:
     PtrDiffType = SignedInt;    // for http://llvm.org/bugs/show_bug.cgi?id=15726
     LongLongAlign = 32;
     SuitableAlign = 128;
-<<<<<<< HEAD
-    DescriptionString = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
-                        "i64:32:64-f32:32:32-f64:32:64-v128:128:128-n32";
-=======
     DescriptionString = "E-m:o-p:32:32-f64:32:64-n32";
->>>>>>> origin/release_35
   }
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::CharPtrBuiltinVaList;
@@ -3695,27 +3658,12 @@ public:
 
     switch (getTriple().getOS()) {
     case llvm::Triple::NetBSD:
-      SizeType = UnsignedLong;
-      PtrDiffType = SignedLong;
-      WCharType = SignedInt;
-      break;
-    default:
-      // AAPCS 7.1.1, ARM-Linux ABI 2.4: type of wchar_t is unsigned int.
-      WCharType = UnsignedInt;
-      SizeType = UnsignedInt;
-      PtrDiffType = SignedInt;
-      break;
-    }
-=======
-    switch (getTriple().getOS()) {
-    case llvm::Triple::NetBSD:
       PtrDiffType = SignedLong;
       break;
     default:
       PtrDiffType = SignedInt;
       break;
     }
->>>>>>> origin/release_35
 
     // {} in inline assembly are neon specifiers, not assembly variant
     // specifiers.

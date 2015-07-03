@@ -3022,7 +3022,6 @@ static Value *packTBLDVectorList(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
     TblOps.push_back(CGF.Builder.CreateShuffleVector(Ops[PairPos],
                                                      Ops[PairPos+1], SV, Name));
     PairPos += 2;
->>>>>>> origin/release_35
   }
 
   // If there's an odd number of 64-bit lookup table, fill the high 64-bit

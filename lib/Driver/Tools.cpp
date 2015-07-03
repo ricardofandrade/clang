@@ -449,132 +449,6 @@ void Clang::AddPreprocessingOptions(Compilation &C,
   getToolChain().AddClangSystemIncludeArgs(Args, CmdArgs);
 }
 
-<<<<<<< HEAD
-/// getLLVMArchSuffixForARM - Get the LLVM arch name to use for a particular
-/// CPU.
-//
-// FIXME: This is redundant with -mcpu, why does LLVM use this.
-// FIXME: tblgen this, or kill it!
-static const char *getLLVMArchSuffixForARM(StringRef CPU) {
-  return llvm::StringSwitch<const char *>(CPU)
-    .Case("strongarm", "v4")
-    .Cases("arm7tdmi", "arm7tdmi-s", "arm710t", "v4t")
-    .Cases("arm720t", "arm9", "arm9tdmi", "v4t")
-    .Cases("arm920", "arm920t", "arm922t", "v4t")
-    .Cases("arm940t", "ep9312","v4t")
-    .Cases("arm10tdmi",  "arm1020t", "v5")
-    .Cases("arm9e",  "arm926ej-s",  "arm946e-s", "v5e")
-    .Cases("arm966e-s",  "arm968e-s",  "arm10e", "v5e")
-    .Cases("arm1020e",  "arm1022e",  "xscale", "iwmmxt", "v5e")
-    .Cases("arm1136j-s",  "arm1136jf-s",  "arm1176jz-s", "v6")
-    .Cases("arm1176jzf-s",  "mpcorenovfp",  "mpcore", "v6")
-    .Cases("arm1156t2-s",  "arm1156t2f-s", "v6t2")
-    .Cases("cortex-a5", "cortex-a7", "cortex-a8", "v7")
-    .Cases("cortex-a9", "cortex-a12", "cortex-a15", "v7")
-    .Cases("cortex-r4", "cortex-r5", "v7r")
-    .Case("cortex-m0", "v6m")
-    .Case("cortex-m3", "v7m")
-    .Case("cortex-m4", "v7em")
-    .Case("cortex-a9-mp", "v7f")
-    .Case("swift", "v7s")
-    .Cases("cortex-a53", "cortex-a57", "v8")
-    .Default("");
-}
-
-/// getARMTargetCPU - Get the (LLVM) name of the ARM cpu we are targeting.
-//
-// FIXME: tblgen this.
-static std::string getARMTargetCPU(const ArgList &Args,
-                                   const llvm::Triple &Triple) {
-  // FIXME: Warn on inconsistent use of -mcpu and -march.
-
-  // If we have -mcpu=, use that.
-  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
-    StringRef MCPU = A->getValue();
-    // Handle -mcpu=native.
-    if (MCPU == "native")
-      return llvm::sys::getHostCPUName();
-    else
-      return MCPU;
-  }
-
-  StringRef MArch;
-  if (Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    // Otherwise, if we have -march= choose the base CPU for that arch.
-    MArch = A->getValue();
-  } else {
-    // Otherwise, use the Arch from the triple.
-    MArch = Triple.getArchName();
-  }
-
-  if (Triple.getOS() == llvm::Triple::NetBSD) {
-    if (MArch == "armv6")
-      return "arm1176jzf-s";
-  }
-
-  // Handle -march=native.
-  std::string NativeMArch;
-  if (MArch == "native") {
-    std::string CPU = llvm::sys::getHostCPUName();
-    if (CPU != "generic") {
-      // Translate the native cpu into the architecture. The switch below will
-      // then chose the minimum cpu for that arch.
-      NativeMArch = std::string("arm") + getLLVMArchSuffixForARM(CPU);
-      MArch = NativeMArch;
-    }
-  }
-
-  return llvm::StringSwitch<const char *>(MArch)
-    .Cases("armv2", "armv2a","arm2")
-    .Case("armv3", "arm6")
-    .Case("armv3m", "arm7m")
-    .Case("armv4", "strongarm")
-    .Case("armv4t", "arm7tdmi")
-    .Cases("armv5", "armv5t", "arm10tdmi")
-    .Cases("armv5e", "armv5te", "arm1022e")
-    .Case("armv5tej", "arm926ej-s")
-    .Cases("armv6", "armv6k", "arm1136jf-s")
-    .Case("armv6j", "arm1136j-s")
-    .Cases("armv6z", "armv6zk", "arm1176jzf-s")
-    .Case("armv6t2", "arm1156t2-s")
-    .Cases("armv6m", "armv6-m", "cortex-m0")
-    .Cases("armv7", "armv7a", "armv7-a", "cortex-a8")
-    .Cases("armv7em", "armv7e-m", "cortex-m4")
-    .Cases("armv7f", "armv7-f", "cortex-a9-mp")
-    .Cases("armv7s", "armv7-s", "swift")
-    .Cases("armv7r", "armv7-r", "cortex-r4")
-    .Cases("armv7m", "armv7-m", "cortex-m3")
-    .Cases("armv8", "armv8a", "armv8-a", "cortex-a53")
-    .Case("ep9312", "ep9312")
-    .Case("iwmmxt", "iwmmxt")
-    .Case("xscale", "xscale")
-    // If all else failed, return the most base CPU with thumb interworking
-    // supported by LLVM.
-    .Default("arm7tdmi");
-}
-
-/// getAArch64TargetCPU - Get the (LLVM) name of the AArch64 cpu we are targeting.
-//
-// FIXME: tblgen this.
-static std::string getAArch64TargetCPU(const ArgList &Args,
-                                       const llvm::Triple &Triple) {
-  // FIXME: Warn on inconsistent use of -mcpu and -march.
-
-  // If we have -mcpu=, use that.
-  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
-    StringRef MCPU = A->getValue();
-    // Handle -mcpu=native.
-    if (MCPU == "native")
-      return llvm::sys::getHostCPUName();
-    else
-      return MCPU;
-  }
-
-  return "generic";
-}
-
-=======
->>>>>>> origin/release_35
 // FIXME: Move to target hook.
 static bool isSignedCharDefault(const llvm::Triple &Triple) {
   switch (Triple.getArch()) {
@@ -6288,40 +6162,6 @@ void openbsd::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
   if (NeedsKPIC)
     addAssemblerKPIC(Args, CmdArgs);
 
-  // When building 32-bit code on OpenBSD/amd64, we have to explicitly
-  // instruct as in the base system to assemble 32-bit code.
-  if (getToolChain().getArch() == llvm::Triple::x86)
-    CmdArgs.push_back("--32");
-  else if (getToolChain().getArch() == llvm::Triple::ppc) {
-    CmdArgs.push_back("-mppc");
-    CmdArgs.push_back("-many");
-  } else if (getToolChain().getArch() == llvm::Triple::mips64 ||
-             getToolChain().getArch() == llvm::Triple::mips64el) {
-    StringRef CPUName;
-    StringRef ABIName;
-    getMipsCPUAndABI(Args, getToolChain().getTriple(), CPUName, ABIName);
-
-    CmdArgs.push_back("-mabi");
-    CmdArgs.push_back(getGnuCompatibleMipsABIName(ABIName).data());
-
-    if (getToolChain().getArch() == llvm::Triple::mips64)
-      CmdArgs.push_back("-EB");
-    else
-      CmdArgs.push_back("-EL");
-
-    Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
-                                      options::OPT_fpic, options::OPT_fno_pic,
-                                      options::OPT_fPIE, options::OPT_fno_PIE,
-                                      options::OPT_fpie, options::OPT_fno_pie);
-    if (LastPICArg &&
-        (LastPICArg->getOption().matches(options::OPT_fPIC) ||
-         LastPICArg->getOption().matches(options::OPT_fpic) ||
-         LastPICArg->getOption().matches(options::OPT_fPIE) ||
-         LastPICArg->getOption().matches(options::OPT_fpie))) {
-      CmdArgs.push_back("-KPIC");
-    }
-  }
-
   Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA,
                        options::OPT_Xassembler);
 
@@ -7262,21 +7102,6 @@ void gnutools::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
       // support -mmsa / -mno-msa options.
       if (A->getOption().matches(options::OPT_mmsa))
         CmdArgs.push_back(Args.MakeArgString("-mmsa"));
-<<<<<<< HEAD
-    }
-
-    Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
-                                      options::OPT_fpic, options::OPT_fno_pic,
-                                      options::OPT_fPIE, options::OPT_fno_PIE,
-                                      options::OPT_fpie, options::OPT_fno_pie);
-    if (LastPICArg &&
-        (LastPICArg->getOption().matches(options::OPT_fPIC) ||
-         LastPICArg->getOption().matches(options::OPT_fpic) ||
-         LastPICArg->getOption().matches(options::OPT_fPIE) ||
-         LastPICArg->getOption().matches(options::OPT_fpie))) {
-      CmdArgs.push_back("-KPIC");
-=======
->>>>>>> origin/release_35
     }
 
     Args.AddLastArg(CmdArgs, options::OPT_mhard_float,

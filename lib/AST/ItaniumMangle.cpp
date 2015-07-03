@@ -141,18 +141,10 @@ public:
   void mangleCXXVTable(const CXXRecordDecl *RD, raw_ostream &) override;
   void mangleCXXVTT(const CXXRecordDecl *RD, raw_ostream &) override;
   void mangleCXXCtorVTable(const CXXRecordDecl *RD, int64_t Offset,
-<<<<<<< HEAD
-                           const CXXRecordDecl *Type,
-                           raw_ostream &);
-  void mangleCXXRTTI(QualType T, raw_ostream &);
-  void mangleCXXRTTIName(QualType T, raw_ostream &);
-  void mangleTypeName(QualType T, raw_ostream &);
-=======
                            const CXXRecordDecl *Type, raw_ostream &) override;
   void mangleCXXRTTI(QualType T, raw_ostream &) override;
   void mangleCXXRTTIName(QualType T, raw_ostream &) override;
   void mangleTypeName(QualType T, raw_ostream &) override;
->>>>>>> origin/release_35
   void mangleCXXCtor(const CXXConstructorDecl *D, CXXCtorType Type,
                      raw_ostream &) override;
   void mangleCXXDtor(const CXXDestructorDecl *D, CXXDtorType Type,
@@ -2658,8 +2650,6 @@ recurse:
   case Expr::ShuffleVectorExprClass:
   case Expr::ConvertVectorExprClass:
   case Expr::StmtExprClass:
-  case Expr::UnaryTypeTraitExprClass:
-  case Expr::BinaryTypeTraitExprClass:
   case Expr::ReflectionTypeTraitExprClass:
   case Expr::TypeTraitExprClass:
   case Expr::ArrayTypeTraitExprClass:
@@ -3865,13 +3855,10 @@ void ItaniumMangleContextImpl::mangleTypeName(QualType Ty, raw_ostream &Out) {
   mangleCXXRTTIName(Ty, Out);
 }
 
-<<<<<<< HEAD
-=======
 void ItaniumMangleContextImpl::mangleStringLiteral(const StringLiteral *, raw_ostream &) {
   llvm_unreachable("Can't mangle string literals");
 }
 
->>>>>>> origin/release_35
 ItaniumMangleContext *
 ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags) {
   return new ItaniumMangleContextImpl(Context, Diags);

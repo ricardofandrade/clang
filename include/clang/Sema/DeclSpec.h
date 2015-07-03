@@ -339,7 +339,6 @@ private:
 
   // friend-specifier
   unsigned Friend_specified : 1;
-  unsigned Friend_using_specified : 1;
 
   // constexpr-specifier
   unsigned Constexpr_specified : 1;
@@ -382,7 +381,7 @@ private:
   SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc;
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
   SourceLocation FS_forceinlineLoc;
-  SourceLocation FriendLoc, FriendUsingLoc, ModulePrivateLoc, ConstexprLoc;
+  SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
 
   WrittenBuiltinSpecs writtenBS;
   void SaveWrittenBuiltinSpecs();
@@ -429,7 +428,6 @@ public:
       FS_explicit_specified(false),
       FS_noreturn_specified(false),
       Friend_specified(false),
-      Friend_using_specified(false),
       Constexpr_specified(false),
       Attrs(attrFactory),
       ProtocolQualifiers(nullptr),
@@ -694,8 +692,6 @@ public:
 
   bool SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                      unsigned &DiagID);
-  bool SetFriendUsingSpec(SourceLocation Loc, const char *&PrevSpec,
-                          unsigned &DiagID);
   bool setModulePrivateSpec(SourceLocation Loc, const char *&PrevSpec,
                             unsigned &DiagID);
   bool SetConstexprSpec(SourceLocation Loc, const char *&PrevSpec,
@@ -703,9 +699,6 @@ public:
 
   bool isFriendSpecified() const { return Friend_specified; }
   SourceLocation getFriendSpecLoc() const { return FriendLoc; }
-
-  bool isFriendUsingSpecified() const { return Friend_using_specified; }
-  SourceLocation getFriendUsingSpecLoc() const { return FriendUsingLoc; }
 
   bool isModulePrivateSpecified() const { return ModulePrivateLoc.isValid(); }
   SourceLocation getModulePrivateSpecLoc() const { return ModulePrivateLoc; }
@@ -2190,26 +2183,6 @@ private:
   SourceLocation LastLocation;
 };
 
-<<<<<<< HEAD
-/// \brief An individual capture in a lambda introducer.
-struct LambdaCapture {
-  LambdaCaptureKind Kind;
-  SourceLocation Loc;
-  IdentifierInfo *Id;
-  SourceLocation EllipsisLoc;
-  ExprResult Init;
-  ParsedType InitCaptureType;
-  LambdaCapture(LambdaCaptureKind Kind, SourceLocation Loc,
-                IdentifierInfo* Id,
-                SourceLocation EllipsisLoc,
-                ExprResult Init, ParsedType InitCaptureType)
-    : Kind(Kind), Loc(Loc), Id(Id), EllipsisLoc(EllipsisLoc), Init(Init),
-        InitCaptureType(InitCaptureType)
-  {}
-};
-
-=======
->>>>>>> origin/release_35
 /// \brief Represents a complete lambda introducer.
 struct LambdaIntroducer {
   /// \brief An individual capture in a lambda introducer.

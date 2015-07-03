@@ -2439,8 +2439,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
 /// [C++]   'virtual'
 /// [C++]   'explicit'
 /// [OpenCL] '__kernel'
-/// --    'friend': [C++ dcl.friend]
-///       'friend' 'using'[opt]: [C++ dcl.friend] ++ [C.K.]
+///       'friend': [C++ dcl.friend]
 ///       'constexpr': [C++0x dcl.constexpr]
 
 ///
@@ -2964,24 +2963,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       else {
         PrevSpec = ""; // not actually used by the diagnostic
         DiagID = diag::err_friend_invalid_in_context;
-        isInvalid = true;
-      }
-      break;
-
-    // C.K. friend using -- Bikeshed: "friend inline"/"inline friend" better? ... or even ".. import"??
-    case tok::kw_using:
-      if (DSContext == DSC_class) {
-        // Use DS.getFriendSpecLoc() and PrevTokLocation to check if this keyword follows 'friend' directly
-        if (!DS.isFriendSpecified() || DS.getFriendSpecLoc() != PrevTokLocation) {
-          PrevSpec = ""; // not actually used by the diagnostic
-          DiagID = diag::err_using_invalid_in_context;
-          isInvalid = true;
-        } else {
-          isInvalid = DS.SetFriendUsingSpec(Loc, PrevSpec, DiagID);
-        }
-      } else  {
-        PrevSpec = ""; // not actually used by the diagnostic
-        DiagID = diag::err_using_invalid_in_context;
         isInvalid = true;
       }
       break;
@@ -3747,9 +3728,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   Decl *TagDecl = Actions.ActOnTag(getCurScope(), DeclSpec::TST_enum, TUK,
                                    StartLoc, SS, Name, NameLoc, attrs.getList(),
                                    AS, DS.getModulePrivateSpecLoc(), TParams,
-                                   Owned, IsDependent,
-                                   DS.getFriendSpecLoc(),
-                                   DS.getFriendUsingSpecLoc(), ScopedEnumKWLoc,
+                                   Owned, IsDependent, ScopedEnumKWLoc,
                                    IsScopedUsingClassTag, BaseType,
                                    DSC == DSC_type_specifier);
 
