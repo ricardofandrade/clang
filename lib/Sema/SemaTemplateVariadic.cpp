@@ -705,7 +705,13 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   const DeclSpec &DS = D.getDeclSpec();
   switch (DS.getTypeSpecType()) {
   case TST_recordBaseType:
-  case TST_recordVirtualBaseType: {
+  case TST_recordDirectBaseType:
+  case TST_recordVirtualBaseType:
+  case TST_RecordMemberFieldType:
+  case TST_RecordMethodType:
+  case TST_RecordFriendType:
+  case TST_meta_namespaceType:
+      {
     // test parameter exprs also
     ArrayRef<Expr*> Args = DS.getParamExprs();
     for (ArrayRef<Expr*>::iterator I = Args.begin(), E = Args.end();

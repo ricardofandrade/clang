@@ -2466,6 +2466,11 @@ private:
   ExprResult ParseTypeTrait();
   
   //===--------------------------------------------------------------------===//
+  // Experimental: Reflection Traits
+  ExprResult ParseReflectionTypeTrait();
+  ExprResult ParseNamespaceReflectionTrait();
+
+  //===--------------------------------------------------------------------===//
   // Embarcadero: Arary and Expression Traits
   ExprResult ParseArrayTypeTrait();
   ExprResult ParseExpressionTrait();

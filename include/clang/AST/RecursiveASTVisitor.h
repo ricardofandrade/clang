@@ -2161,6 +2161,10 @@ DEF_TRAVERSE_STMT(CXXTemporaryObjectExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
 
+DEF_TRAVERSE_STMT(ReflectionTypeTraitExpr, {
+  TRY_TO(TraverseTypeLoc(S->getQueriedTypeSourceInfo()->getTypeLoc()));
+})
+
 // Walk only the visible parts of lambda expressions.
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseLambdaExpr(LambdaExpr *S) {

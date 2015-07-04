@@ -8804,7 +8804,7 @@ ExprResult
     }
 
     if (!getDerived().AlwaysRebuild() && !ArgChanged)
-      return SemaRef.Owned(E);
+      return Owned(E);
 
     return getDerived().RebuildReflectionTypeTrait(E->getTrait(),
       E->getLocStart(),

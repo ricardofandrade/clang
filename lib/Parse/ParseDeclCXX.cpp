@@ -914,7 +914,7 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
 
   SourceLocation StartLoc = ConsumeToken();
   BalancedDelimiterTracker Parens(*this, tok::l_paren);
-  if (Parens.expectAndConsume(diag::err_expected_lparen)) {
+  if (Parens.expectAndConsume(diag::err_expected_lparen_after)) {
       return;
   }
 
@@ -950,7 +950,8 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
   const char *PrevSpec = 0;
   unsigned DiagID;
   if (DS.SetTypeSpecType(TagType, StartLoc, StartLoc, PrevSpec,
-                         DiagID, Ty.get(), Args))
+                         DiagID, Ty.get(), Args,
+                         Actions.getASTContext().getPrintingPolicy()))
     Diag(StartLoc, DiagID) << PrevSpec;
 }
 

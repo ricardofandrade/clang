@@ -310,7 +310,12 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_void:
     case TST_wchar:
     case TST_recordBaseType:
+    case TST_recordDirectBaseType:
     case TST_recordVirtualBaseType:
+    case TST_RecordMemberFieldType:
+    case TST_RecordMethodType:
+    case TST_RecordFriendType:
+    case TST_meta_namespaceType:
       return false;
 
     case TST_decltype_auto:
@@ -476,7 +481,12 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_decltype_auto: return "decltype(auto)";
   case DeclSpec::TST_underlyingType: return "__underlying_type";
   case DeclSpec::TST_recordBaseType: return "__record_base_type";
-  case DeclSpec::TST_recordVirtualBaseType:return "__record_virtual_base_type";
+  case DeclSpec::TST_recordDirectBaseType: return "__record_direct_base_type";
+  case DeclSpec::TST_recordVirtualBaseType: return "__record_virtual_base_type";
+  case DeclSpec::TST_RecordMemberFieldType: return "__record_member_field_type";
+  case DeclSpec::TST_RecordMethodType: return "__record_method_type";
+  case DeclSpec::TST_RecordFriendType: return "__record_friend_type";
+  case DeclSpec::TST_meta_namespaceType: return "__namespace_type";
   case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
   case DeclSpec::TST_atomic: return "_Atomic";
   case DeclSpec::TST_error:       return "(error)";
@@ -639,12 +649,13 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   const char *&PrevSpec,
   unsigned &DiagID,
   ParsedType Rep,
-  ArrayRef<Expr*> Args) {
+  ArrayRef<Expr*> Args,
+  const PrintingPolicy &Policy) {
     assert(isTypeRep(T) && "T does not store a type");
     assert(isParameterizedRep(T) && "T does not require arguments");
     assert(Rep && "no type provided!");
     if (TypeSpecType != TST_unspecified) {
-      PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType);
+      PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
       DiagID = diag::err_invalid_decl_spec_combination;
       return true;
     }

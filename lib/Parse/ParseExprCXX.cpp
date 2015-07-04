@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "RAIIObjectsForParser.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/Basic/TypeTraits.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Parse/ParseDiagnostic.h"
@@ -2848,6 +2849,56 @@ static unsigned TypeTraitArity(tok::TokenKind kind) {
   }
 }
 
+static ReflectionTypeTrait ReflectionTypeTraitFromTokKind(tok::TokenKind kind) {
+  switch(kind) {
+  default: llvm_unreachable("Not a known reflection type trait.");
+  case tok::kw___enumerator_list_size:             return RTT_EnumeratorListSize;
+  case tok::kw___enumerator_value:                 return RTT_EnumeratorValue;
+  case tok::kw___enumerator_identifier:            return RTT_EnumeratorIdentifier;
+
+  case tok::kw___enum_minimum_value:               return RTT_EnumMinimumValue;
+  case tok::kw___enum_maximum_value:               return RTT_EnumMaximumValue;
+  case tok::kw___enum_value_dup_count:             return RTT_EnumValueDupCount;
+  case tok::kw___enum_has_gaps_in_value_range:     return RTT_EnumHasGapsInValueRange;
+  case tok::kw___enum_value_monotonicity:          return RTT_EnumValueMonotonicity;
+  case tok::kw___enum_value_pop_count:             return RTT_EnumValuePopCount;
+
+  case tok::kw___type_canonical_name:              return RTT_TypeCanonicalName;
+  case tok::kw___type_sugared_name:                return RTT_TypeSugaredName;
+  case tok::kw___type_is_unnamed:                  return RTT_TypeIsUnnamed;
+
+  case tok::kw___record_base_access_spec:          return RTT_RecordBaseAccessSpec;
+  case tok::kw___record_base_count:                return RTT_RecordBaseCount;
+  case tok::kw___record_base_is_virtual:           return RTT_RecordBaseIsVirtual;
+  case tok::kw___record_direct_base_count:         return RTT_RecordDirectBaseCount;
+  case tok::kw___record_virtual_base_count:        return RTT_RecordVirtualBaseCount;
+
+  case tok::kw___record_member_field_count:        return RTT_RecordMemberFieldCount;
+  case tok::kw___record_member_field_ptr:          return RTT_RecordMemberFieldPtr;
+  case tok::kw___object_member_field_ref:          return RTT_ObjectMemberFieldRef;
+  case tok::kw___record_member_field_identifier:   return RTT_RecordMemberFieldIdentifier;
+  case tok::kw___record_member_field_info:         return RTT_RecordMemberFieldInfo;
+  case tok::kw___record_member_field_is_mutable:   return RTT_RecordMemberFieldIsMutable;
+  case tok::kw___record_member_field_is_bit_field: return RTT_RecordMemberFieldIsBitField;
+  case tok::kw___record_member_field_bit_field_size: return RTT_RecordMemberFieldBitFieldSize;
+  case tok::kw___record_member_field_is_anon_bit_field: return RTT_RecordMemberFieldIsAnonBitField;
+  case tok::kw___record_member_field_is_reference: return RTT_RecordMemberFieldIsReference;
+
+  case tok::kw___record_method_count:        return RTT_RecordMethodCount;
+  case tok::kw___record_method_identifier:   return RTT_RecordMethodIdentifier;
+  case tok::kw___record_function_param_identifier:   return RTT_RecordMethodParamIdentifier;
+  case tok::kw___record_method_info:   return RTT_RecordMethodInfo;
+
+  case tok::kw___record_friend_count:        return RTT_RecordFriendCount;
+  case tok::kw___record_friend_identifier:   return RTT_RecordFriendIdentifier;
+
+  case tok::kw___namespace_identifier:   return RTT_NamespaceIdentifier;
+  case tok::kw___namespace_count:   return RTT_NamespaceCount;
+
+  case tok::kw___annotate_str:   return RTT_AnnotateStr;
+  }
+}
+
 /// ParseReflectionTrait - Parse ....
 ///
 ///       primary-expression:
@@ -2859,7 +2910,7 @@ ExprResult Parser::ParseReflectionTypeTrait() {
   SourceLocation Loc = ConsumeToken();
 
   BalancedDelimiterTracker Parens(*this, tok::l_paren);
-  if (Parens.expectAndConsume(diag::err_expected_lparen))
+  if (Parens.expectAndConsume(diag::err_expected_lparen_after))
     return ExprError();
 
   TypeResult Ty = ParseTypeName();
@@ -2885,23 +2936,29 @@ ExprResult Parser::ParseReflectionTypeTrait() {
   case RTT_TypeIsUnnamed:
 
   case RTT_RecordBaseCount:
+  case RTT_RecordDirectBaseCount:
   case RTT_RecordVirtualBaseCount:
-
   case RTT_RecordMemberFieldCount:
 
+  case RTT_RecordMethodCount:
+  case RTT_RecordFriendCount:
+
+  case RTT_NamespaceCount:
+
+  case RTT_AnnotateStr:
     // Nothing more to parse
     break;
 
 
     // 2 arguments...
   case RTT_ObjectMemberFieldRef:
+  case RTT_RecordMethodParamIdentifier:
     {
       // Parse comma and then expression
       if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
         Parens.skipToEnd();
         return ExprError();
       }
-
       ExprResult IdxExpr = ParseAssignmentExpression();
       if (IdxExpr.isInvalid()) {
         Parens.skipToEnd();
@@ -2920,13 +2977,19 @@ ExprResult Parser::ParseReflectionTypeTrait() {
   case RTT_RecordBaseIsVirtual:
 
   case RTT_RecordMemberFieldPtr:
-  case RTT_RecordMemberFieldAccessSpec:
+  case RTT_RecordMemberFieldInfo:
   case RTT_RecordMemberFieldIdentifier:
   case RTT_RecordMemberFieldIsMutable:
   case RTT_RecordMemberFieldIsBitField:
   case RTT_RecordMemberFieldBitFieldSize:
   case RTT_RecordMemberFieldIsAnonBitField:
   case RTT_RecordMemberFieldIsReference:
+
+  case RTT_RecordMethodIdentifier:
+  case RTT_RecordMethodInfo:
+
+  case RTT_RecordFriendIdentifier:
+  case RTT_NamespaceIdentifier:
     {
     // Parse comma and then expression
     if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
@@ -2951,6 +3014,29 @@ ExprResult Parser::ParseReflectionTypeTrait() {
   return Actions.ActOnReflectionTypeTrait(RTT, Loc, Ty.get(),
     Args, Parens.getCloseLocation());
 }
+
+#if 0
+/// ParseReflectionTrait - Parse ....
+///
+///       primary-expression:
+///             '__namespace_count' '(' namespace ident ')'
+///
+ExprResult Parser::ParseNamespaceReflectionTrait() {
+  ReflectionTypeTrait RTT = ReflectionTypeTraitFromTokKind(Tok.getKind());
+  SourceLocation Loc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume(diag::err_expected_lparen))
+    return ExprError();
+
+  ExprResult Expr = ParseExpression();
+
+  T.consumeClose();
+
+  return Actions.ActOnNamespaceTrait(RTT, Loc, Expr.get(),
+    T.getCloseLocation());
+}
+#endif
 
 /// \brief Parse the built-in type-trait pseudo-functions that allow 
 /// implementation of the TR1/C++11 type traits templates.

@@ -12604,7 +12604,7 @@ bool Sema::tryCaptureVariable(VarDecl *Var, SourceLocation ExprLoc,
         case Type::Attributed:
         case Type::SubstTemplateTypeParm:
         case Type::PackExpansion:
-          // Keep walking after single level desugaring.
+        // Keep walking after single level desugaring.
           QTy = QTy.getSingleStepDesugaredType(getASTContext());
           break;
         case Type::Typedef:
@@ -12621,6 +12621,9 @@ bool Sema::tryCaptureVariable(VarDecl *Var, SourceLocation ExprLoc,
           break;
         case Type::Atomic:
           QTy = cast<AtomicType>(Ty)->getValueType();
+          break;
+        case Type::ReflectionTransform:
+          QTy = cast<ReflectionTransformType>(Ty)->getReflectedType();
           break;
         }
       } while (!QTy.isNull() && QTy->isVariablyModifiedType());

@@ -1979,6 +1979,7 @@ static const char *getTypeTraitName(ReflectionTypeTrait RTT) {
   case RTT_RecordBaseCount:        return "__record_base_count";
   case RTT_RecordBaseAccessSpec:   return "__record_base_access_spec";
   case RTT_RecordBaseIsVirtual:    return "__record_base_is_virtual";
+  case RTT_RecordDirectBaseCount:  return "__record_direct_base_count";
   case RTT_RecordVirtualBaseCount: return "__record_virtual_base_count";
 
   case RTT_RecordMemberFieldCount: return "__record_member_field_count";
@@ -1986,8 +1987,8 @@ static const char *getTypeTraitName(ReflectionTypeTrait RTT) {
   case RTT_ObjectMemberFieldRef:   return "__object_member_field_ref";
   case RTT_RecordMemberFieldIdentifier:
     return "__record_member_field_identifier";
-  case RTT_RecordMemberFieldAccessSpec:
-    return "__record_member_field_access_spec";
+  case RTT_RecordMemberFieldInfo:
+    return "__record_member_field_info";
   case RTT_RecordMemberFieldIsMutable:
     return "__record_member_field_is_mutable";
   case RTT_RecordMemberFieldIsBitField:
@@ -1999,6 +2000,27 @@ static const char *getTypeTraitName(ReflectionTypeTrait RTT) {
   case RTT_RecordMemberFieldIsReference:
     return "__record_member_field_is_reference";
 
+  case RTT_RecordMethodCount:
+    return "__record_method_count";
+  case RTT_RecordMethodIdentifier:
+    return "__record_method_identifier";
+  case RTT_RecordMethodParamIdentifier:
+    return "__record_function_param_identifier";
+  case RTT_RecordMethodInfo:
+    return "__record_method_info";
+
+  case RTT_RecordFriendCount:
+    return "__record_friend_count";
+  case RTT_RecordFriendIdentifier:
+    return "__record_friend_identifier";
+
+  case RTT_NamespaceIdentifier:
+    return "__namespace_identifier";
+  case RTT_NamespaceCount:
+    return "__namespace_count";
+
+  case RTT_AnnotateStr:
+      return "__annotate_str";
 
   }
   llvm_unreachable("Reflection type trait not covered by switch");

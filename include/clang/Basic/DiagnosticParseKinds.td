@@ -788,6 +788,8 @@ def err_paren_sizeof_parameter_pack : Error<
 def err_sizeof_parameter_pack : Error<
   "expected parenthesized parameter pack name in 'sizeof...' expression">;
 
+def err_expected_comma : Error<
+  "expected ',' in reflection intrinsic">;
 // C++11 lambda expressions
 def err_expected_comma_or_rsquare : Error<
   "expected ',' or ']' in lambda capture list">;

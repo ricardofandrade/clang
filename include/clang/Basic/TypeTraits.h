@@ -116,18 +116,32 @@ namespace clang {
     RTT_RecordBaseCount,
     RTT_RecordBaseAccessSpec,
     RTT_RecordBaseIsVirtual,
+    RTT_RecordDirectBaseCount,
     RTT_RecordVirtualBaseCount,
 
     RTT_RecordMemberFieldCount,
     RTT_RecordMemberFieldPtr,
     RTT_ObjectMemberFieldRef,
-    RTT_RecordMemberFieldAccessSpec,
+    RTT_RecordMemberFieldInfo,
     RTT_RecordMemberFieldIdentifier,
     RTT_RecordMemberFieldIsMutable,
     RTT_RecordMemberFieldIsBitField,
     RTT_RecordMemberFieldBitFieldSize,
     RTT_RecordMemberFieldIsAnonBitField,
-    RTT_RecordMemberFieldIsReference
+    RTT_RecordMemberFieldIsReference,
+
+    RTT_RecordMethodCount,
+    RTT_RecordMethodIdentifier,
+    RTT_RecordMethodParamIdentifier,
+    RTT_RecordMethodInfo,
+
+    RTT_RecordFriendCount,
+    RTT_RecordFriendIdentifier,
+
+    RTT_NamespaceIdentifier,
+    RTT_NamespaceCount,
+
+    RTT_AnnotateStr
   };
 
 }

@@ -301,7 +301,12 @@ public:
   static const TST TST_decltype_auto = clang::TST_decltype_auto;
   static const TST TST_underlyingType = clang::TST_underlyingType;
   static const TST TST_recordBaseType = clang::TST_recordBaseType;
+  static const TST TST_recordDirectBaseType = clang::TST_recordDirectBaseType;
   static const TST TST_recordVirtualBaseType = clang::TST_recordVirtualBaseType;
+  static const TST TST_RecordMethodType = clang::TST_RecordMethodType;
+  static const TST TST_RecordMemberFieldType = clang::TST_RecordMemberFieldType;
+  static const TST TST_RecordFriendType = clang::TST_RecordFriendType;
+  static const TST TST_meta_namespaceType = clang::TST_meta_namespaceType;
   static const TST TST_auto = clang::TST_auto;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
   static const TST TST_atomic = clang::TST_atomic;
@@ -408,13 +413,16 @@ private:
   static bool isTypeRep(TST T) {
     return (T == TST_typename || T == TST_typeofType ||
             T == TST_underlyingType || T == TST_atomic ||
-            T == TST_recordBaseType || T == TST_recordVirtualBaseType);
+            T == TST_recordBaseType || 
+            T == TST_recordDirectBaseType || T == TST_recordVirtualBaseType ||
+            T == TST_RecordMemberFieldType || T == TST_RecordMemberFieldType );
   }
   static bool isExprRep(TST T) {
     return (T == TST_typeofExpr || T == TST_decltype);
   }
   static bool isParameterizedRep(TST T) {
-    return (T == TST_recordBaseType || T == TST_recordVirtualBaseType);
+    return (T == TST_recordBaseType || T == TST_recordDirectBaseType || T == TST_recordVirtualBaseType ||
+            T == TST_RecordMemberFieldType || T == TST_RecordMemberFieldType );
   }
 
   DeclSpec(const DeclSpec &) LLVM_DELETED_FUNCTION;
@@ -656,7 +664,8 @@ public:
                        const PrintingPolicy &Policy);
   bool SetTypeSpecType(TST T, SourceLocation TagKwLoc,
                        SourceLocation TagNameLoc, const char *&PrevSpec,
-                       unsigned &DiagID, ParsedType Rep, ArrayRef<Expr*> Args);
+                       unsigned &DiagID, ParsedType Rep, ArrayRef<Expr*> Args,
+                       const PrintingPolicy &Policy);
 
   bool SetTypeSpecType(TST T, SourceLocation Loc, const char *&PrevSpec,
                        unsigned &DiagID, Expr *Rep,

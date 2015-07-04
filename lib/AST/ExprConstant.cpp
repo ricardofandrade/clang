@@ -2740,7 +2740,7 @@ static bool handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv,
       APValue Str(Base, CharUnits::Zero(), APValue::NoLValuePath(), 0);
       CompleteObject StrObj(&Str, Base->getType());
       return extractSubobject(Info, Conv, StrObj, LVal.Designator, RVal);
-    } else if (const ReflectionTypeTraitExpr *RTTE =
+    } else if (
                dyn_cast<ReflectionTypeTraitExpr>(Base)) {
       // The right thing to do here?
       assert(0 && "HandleLValueToRValueConversion not implemented "
@@ -4203,7 +4203,7 @@ public:
     return DerivedZeroInitialization(E);
   }
 
-  RetTy VisitReflectionTypeTraitExpr(const ReflectionTypeTraitExpr *E) {
+  bool VisitReflectionTypeTraitExpr(const ReflectionTypeTraitExpr *E) {
     // Can this happen? Is it a problem?
     assert(E->getValue() && "Dependent ReflectionTypeTraitExpr has no value to visit");
     return StmtVisitorTy::Visit(E->getValue());

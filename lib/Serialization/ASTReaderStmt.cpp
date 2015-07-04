@@ -2901,6 +2901,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
                                    ? Record[ASTStmtReader::NumExprFields + 1] 
                                    : 0);
       break;
+      
+    case EXPR_REFLECTION_TYPE_TRAIT:
+      S = ReflectionTypeTraitExpr::CreateDeserialized(Context,
+                  /*NumArgs=*/Record[ASTStmtReader::NumExprFields]);
+      break;
 
     case EXPR_TYPE_TRAIT:
       S = TypeTraitExpr::CreateDeserialized(Context, 

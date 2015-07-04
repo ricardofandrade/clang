@@ -306,8 +306,6 @@ inline Sema::TypoExprState &Sema::TypoExprState::operator=(
   return *this;
 }
 
-} // end namespace clang
-
 // Reflection extension helper functions
 int RequireValidFieldIndex(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr, size_t MaxIdx);
@@ -315,104 +313,21 @@ const CXXRecordDecl *RequireRecordType(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, bool reqComplete);
 const CXXBaseSpecifier *GetRecordBaseAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr);
+const CXXBaseSpecifier *GetRecordDirectBaseAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr);
 const CXXBaseSpecifier *GetRecordVBaseAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr);
 FieldDecl *GetRecordMemberFieldAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr);
+const CXXMethodDecl *GetRecordMethodAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr);
+const FriendDecl *GetRecordFriendAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr);
+const DeclContext *RequireNamespaceDecl(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo);
+const Decl *GetNamespaceDeclAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr);
 
-
-// This requires the variable to be non-dependent and the initializer
-// to not be value dependent.
-inline bool IsVariableAConstantExpression(VarDecl *Var, ASTContext &Context) {
-  const VarDecl *DefVD = 0;
-  return !isa<ParmVarDecl>(Var) &&
-    Var->isUsableInConstantExpressions(Context) &&
-    Var->getAnyInitializer(DefVD) && DefVD->checkInitIsICE(); 
-}
-
-// Directly mark a variable odr-used. Given a choice, prefer to use 
-// MarkVariableReferenced since it does additional checks and then 
-// calls MarkVarDeclODRUsed.
-// If the variable must be captured:
-//  - if FunctionScopeIndexToStopAt is null, capture it in the CurContext
-//  - else capture it in the DeclContext that maps to the 
-//    *FunctionScopeIndexToStopAt on the FunctionScopeInfo stack.  
-inline void MarkVarDeclODRUsed(VarDecl *Var,
-    SourceLocation Loc, Sema &SemaRef,
-    const unsigned *const FunctionScopeIndexToStopAt) {
-  // Keep track of used but undefined variables.
-  // FIXME: We shouldn't suppress this warning for static data members.
-  if (Var->hasDefinition(SemaRef.Context) == VarDecl::DeclarationOnly &&
-    !Var->isExternallyVisible() &&
-    !(Var->isStaticDataMember() && Var->hasInit())) {
-      SourceLocation &old = SemaRef.UndefinedButUsed[Var->getCanonicalDecl()];
-      if (old.isInvalid()) old = Loc;
-  }
-  QualType CaptureType, DeclRefType;
-  SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit, 
-    /*EllipsisLoc*/ SourceLocation(),
-    /*BuildAndDiagnose*/ true, 
-    CaptureType, DeclRefType, 
-    FunctionScopeIndexToStopAt);
-
-  Var->markUsed(SemaRef.Context);
-}
-
-inline bool
-FTIHasNonVoidParameters(const DeclaratorChunk::FunctionTypeInfo &FTI) {
-  // Assume FTI is well-formed.
-  return FTI.NumParams && !FTIHasSingleVoidParameter(FTI);
->>>>>>> origin/release_35
-}
-
-// This requires the variable to be non-dependent and the initializer
-// to not be value dependent.
-inline bool IsVariableAConstantExpression(VarDecl *Var, ASTContext &Context) {
-  const VarDecl *DefVD = nullptr;
-  return !isa<ParmVarDecl>(Var) &&
-    Var->isUsableInConstantExpressions(Context) &&
-    Var->getAnyInitializer(DefVD) && DefVD->checkInitIsICE(); 
-}
-
-// Directly mark a variable odr-used. Given a choice, prefer to use 
-// MarkVariableReferenced since it does additional checks and then 
-// calls MarkVarDeclODRUsed.
-// If the variable must be captured:
-//  - if FunctionScopeIndexToStopAt is null, capture it in the CurContext
-//  - else capture it in the DeclContext that maps to the 
-//    *FunctionScopeIndexToStopAt on the FunctionScopeInfo stack.  
-inline void MarkVarDeclODRUsed(VarDecl *Var,
-    SourceLocation Loc, Sema &SemaRef,
-    const unsigned *const FunctionScopeIndexToStopAt) {
-  // Keep track of used but undefined variables.
-  // FIXME: We shouldn't suppress this warning for static data members.
-  if (Var->hasDefinition(SemaRef.Context) == VarDecl::DeclarationOnly &&
-    !Var->isExternallyVisible() &&
-    !(Var->isStaticDataMember() && Var->hasInit())) {
-      SourceLocation &old = SemaRef.UndefinedButUsed[Var->getCanonicalDecl()];
-      if (old.isInvalid()) old = Loc;
-  }
-  QualType CaptureType, DeclRefType;
-  SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit, 
-    /*EllipsisLoc*/ SourceLocation(),
-    /*BuildAndDiagnose*/ true, 
-    CaptureType, DeclRefType, 
-    FunctionScopeIndexToStopAt);
-
-  Var->markUsed(SemaRef.Context);
-}
-
-/// Return a DLL attribute from the declaration.
-inline InheritableAttr *getDLLAttr(Decl *D) {
-  assert(!(D->hasAttr<DLLImportAttr>() && D->hasAttr<DLLExportAttr>()) &&
-         "A declaration cannot be both dllimport and dllexport.");
-  if (auto *Import = D->getAttr<DLLImportAttr>())
-    return Import;
-  if (auto *Export = D->getAttr<DLLExportAttr>())
-    return Export;
-  return nullptr;
-}
-
-}
+} // end namespace clang
 
 #endif
