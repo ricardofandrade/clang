@@ -950,6 +950,8 @@ DEF_TRAVERSE_TYPE(ObjCObjectPointerType,
 
 DEF_TRAVERSE_TYPE(AtomicType, { TRY_TO(TraverseType(T->getValueType())); })
 
+DEF_TRAVERSE_TYPE(ReflectionTransformType, { TRY_TO(TraverseType(T->getReflectedType())); })
+
 #undef DEF_TRAVERSE_TYPE
 
 // ----------------- TypeLoc traversal -----------------
@@ -1175,6 +1177,8 @@ DEF_TRAVERSE_TYPELOC(ObjCObjectPointerType,
                      { TRY_TO(TraverseTypeLoc(TL.getPointeeLoc())); })
 
 DEF_TRAVERSE_TYPELOC(AtomicType, { TRY_TO(TraverseTypeLoc(TL.getValueLoc())); })
+
+DEF_TRAVERSE_TYPELOC(ReflectionTransformType, { TRY_TO(TraverseTypeLoc(TL.getReflTInfo()->getTypeLoc())); })
 
 #undef DEF_TRAVERSE_TYPELOC
 
@@ -2273,6 +2277,7 @@ DEF_TRAVERSE_STMT(FunctionParmPackExpr, {})
 DEF_TRAVERSE_STMT(MaterializeTemporaryExpr, {})
 DEF_TRAVERSE_STMT(CXXFoldExpr, {})
 DEF_TRAVERSE_STMT(AtomicExpr, {})
+DEF_TRAVERSE_STMT(ReflectionTypeTraitExpr, {})
 
 // These literals (all of them) do not need any action.
 DEF_TRAVERSE_STMT(IntegerLiteral, {})
