@@ -3280,7 +3280,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     // C.K. experimental reflection extension
     case tok::kw___record_base_type:
+    case tok::kw___record_direct_base_type:
     case tok::kw___record_virtual_base_type:
+    case tok::kw___record_member_field_type:
+    case tok::kw___record_method_type:
+    case tok::kw___record_friend_type:
+    case tok::kw___namespace_type:
       ParseReflectionTypeSpecifier(DS);
       continue;
 

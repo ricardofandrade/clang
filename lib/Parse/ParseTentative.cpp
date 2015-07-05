@@ -985,7 +985,12 @@ Parser::isExpressionOrTypeSpecifierSimple(tok::TokenKind Kind) {
   case tok::kw_typeof:
   case tok::kw___underlying_type:
   case tok::kw___record_base_type:
+  case tok::kw___record_direct_base_type:
   case tok::kw___record_virtual_base_type:
+  case tok::kw___record_member_field_type:
+  case tok::kw___record_method_type:
+  case tok::kw___record_friend_type:
+  case tok::kw___namespace_type:
   case tok::kw___cdecl:
   case tok::kw___stdcall:
   case tok::kw___fastcall:
