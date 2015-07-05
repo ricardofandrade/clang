@@ -907,8 +907,18 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
   DeclSpec::TST TagType = DeclSpec::TST_unspecified;
   if (TagTokKind == tok::kw___record_base_type)
     TagType = DeclSpec::TST_recordBaseType;
+  else if (TagTokKind == tok::kw___record_direct_base_type)
+    TagType = DeclSpec::TST_recordDirectBaseType;
   else if (TagTokKind == tok::kw___record_virtual_base_type)
     TagType = DeclSpec::TST_recordVirtualBaseType;
+  else if (TagTokKind == tok::kw___record_member_field_type)
+    TagType = DeclSpec::TST_RecordMemberFieldType;
+  else if (TagTokKind == tok::kw___record_method_type)
+    TagType = DeclSpec::TST_RecordMethodType;
+  else if (TagTokKind == tok::kw___record_friend_type)
+    TagType = DeclSpec::TST_RecordFriendType;
+  else if (TagTokKind == tok::kw___namespace_type)
+    TagType = DeclSpec::TST_meta_namespaceType;
   else
     llvm_unreachable("Not a reflection type specifier");
 
