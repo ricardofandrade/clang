@@ -2884,6 +2884,8 @@ static ReflectionTypeTrait ReflectionTypeTraitFromTokKind(tok::TokenKind kind) {
   case tok::kw___record_member_field_is_anon_bit_field: return RTT_RecordMemberFieldIsAnonBitField;
   case tok::kw___record_member_field_is_reference: return RTT_RecordMemberFieldIsReference;
 
+  case tok::kw___function_param_identifier:   return RTT_FunctionParamIdentifier;
+
   case tok::kw___record_method_count:        return RTT_RecordMethodCount;
   case tok::kw___record_method_identifier:   return RTT_RecordMethodIdentifier;
   case tok::kw___record_function_param_identifier:   return RTT_RecordMethodParamIdentifier;
@@ -2913,13 +2915,81 @@ ExprResult Parser::ParseReflectionTypeTrait() {
   if (Parens.expectAndConsume(diag::err_expected_lparen_after))
     return ExprError();
 
-  TypeResult Ty = ParseTypeName();
-  if (Ty.isInvalid()) {
-    Parens.skipToEnd();
-    return ExprError();
-  }
-
   SmallVector<Expr*, 2> Args;
+
+  ParsedType PT;
+  if (RTT == RTT_FunctionParamIdentifier) {
+    assert(Tok.is(tok::identifier));
+
+    const bool EnteringContext = false;
+
+    CXXScopeSpec SS;
+    if (getLangOpts().CPlusPlus &&
+        ParseOptionalCXXScopeSpecifier(SS, ParsedType(), EnteringContext)) {
+      return ExprError();
+    }
+
+    if (Tok.isNot(tok::identifier) || SS.isInvalid()) {
+      return ExprError();
+    }
+
+    IdentifierInfo *Name = Tok.getIdentifierInfo();
+    SourceLocation NameLoc = Tok.getLocation();
+    ConsumeToken();
+
+    Token Next = NextToken();
+
+    // Look up and classify the identifier. We don't perform any typo-correction
+    // after a scope specifier, because in general we can't recover from typos
+    // there (eg, after correcting 'A::tempalte B<X>::C' [sic], we would need to
+    // jump back into scope specifier parsing).
+    Sema::NameClassification Classification = Actions.ClassifyName(
+            getCurScope(), SS, Name, NameLoc, Next, false /*IsAddressOfOperand*/,
+            nullptr /*CCC*/);
+
+    switch (Classification.getKind()) {
+    case Sema::NC_Expression: {
+      ExprResult ER = Classification.getExpression();
+      /*{
+        // Parse comma and then expression
+        if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
+          Parens.skipToEnd();
+          return ExprError();
+        }
+        ExprResult IdxExpr = ParseAssignmentExpression();
+        if (IdxExpr.isInvalid()) {
+          Parens.skipToEnd();
+          return ExprError();
+        }
+        Args.push_back(IdxExpr.get());
+
+        // fall through!
+      }*/
+      Parens.consumeClose();
+      return Actions.ActOnReflectionExpr(RTT, Loc, ER,
+        Args, Parens.getCloseLocation());
+    }
+
+    case Sema::NC_Type:
+      PT = Classification.getType();
+      break;
+    case Sema::NC_Unknown:
+    case Sema::NC_Error:
+    case Sema::NC_Keyword:
+    case Sema::NC_NestedNameSpecifier:
+    case Sema::NC_TypeTemplate:
+    case Sema::NC_VarTemplate:
+    case Sema::NC_FunctionTemplate:
+      return ExprError();
+    }
+  } else {
+    TypeResult Ty = ParseTypeName();
+    if (Ty.isInvalid()) {
+      Parens.skipToEnd();
+      return ExprError();
+    }
+    PT = Ty.get();
+  }
 
   switch (RTT) {
   case RTT_EnumeratorListSize:
@@ -3011,7 +3081,7 @@ ExprResult Parser::ParseReflectionTypeTrait() {
   }
 
   Parens.consumeClose();
-  return Actions.ActOnReflectionTypeTrait(RTT, Loc, Ty.get(),
+  return Actions.ActOnReflectionTypeTrait(RTT, Loc, PT,
     Args, Parens.getCloseLocation());
 }
 

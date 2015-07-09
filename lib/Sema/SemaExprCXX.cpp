@@ -3612,6 +3612,15 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   }
 }
 
+ExprResult Sema::ActOnReflectionExpr(ReflectionTypeTrait RTT,
+                               SourceLocation KWLoc,
+                               ExprResult LhsExpr,
+                               ArrayRef<Expr*> IdxArgs,
+                               SourceLocation RParen)
+{
+  return BuildReflectionExpr(RTT, KWLoc, LhsExpr.getAs<DeclRefExpr>(), IdxArgs, RParen);
+}
+
 ExprResult Sema::ActOnReflectionTypeTrait(ReflectionTypeTrait RTT,
                                           SourceLocation KWLoc,
                                           ParsedType Ty,
@@ -4058,7 +4067,7 @@ const FriendDecl * clang::GetRecordFriendAtIndexPos(Sema& S, SourceLocation KWLo
 // param name
 const ParmVarDecl * /* clang:: */ GetParmVarDeclAtIndexPos(Sema& S, SourceLocation KWLoc,
                                                        TypeSourceInfo *TSInfo, 
-                                                       const CXXMethodDecl *MD, Expr *IdxExpr)
+                                                       const FunctionDecl *MD, Expr *IdxExpr)
 {
     // Evaluate the index expression, error on Idx < 0
     size_t MaxIdx = std::distance(MD->param_begin(), MD->param_end());
@@ -4068,7 +4077,7 @@ const ParmVarDecl * /* clang:: */ GetParmVarDeclAtIndexPos(Sema& S, SourceLocati
         return 0;
 
     // Get the requested field decl
-    CXXMethodDecl::param_const_iterator It = MD->param_begin();
+    FunctionDecl::param_const_iterator It = MD->param_begin();
     std::advance(It, Idx);
 
     return *It;
@@ -4247,6 +4256,17 @@ static IntegerLiteral *AllocateConvertedAccessSpecifier(ASTContext& Context,
   return IntegerLiteral::Create(Context, apval, VType, KWLoc);
 }
 
+ExprResult Sema::BuildReflectionExpr(ReflectionTypeTrait RTT,
+                                     SourceLocation KWLoc,
+                                     DeclRefExpr *DRE,
+                                     ArrayRef<Expr*> IdxArgs,
+                                     SourceLocation RParen)
+{
+  // the default for a unknown type is DependentTy
+  QualType VType = Context.DependentTy;
+  return AllocateStringLiteral(Context, KWLoc, VType, DRE->getFoundDecl()->getName());
+}
+
 ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   SourceLocation KWLoc,
   TypeSourceInfo *TSInfo,
@@ -4320,6 +4340,8 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   case RTT_ObjectMemberFieldRef:
     // Exact type is dependent on everything, just forward...
     break;
+
+  case RTT_FunctionParamIdentifier:
 
   case RTT_EnumeratorIdentifier:
   case RTT_TypeCanonicalName:
@@ -4847,7 +4869,24 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       break;
                              }
 
-    ///__record_function_param_identifier(T,I,P) 
+    ///__function_param_identifier(T,P)
+    //case RTT_FunctionParamIdentifier: {
+
+      //const FunctionDecl *MD = RequireFunctionType(*this, KWLoc, TSInfo);
+      //if (!MD)
+        //return ExprError();
+
+      //const ParmVarDecl *PD = GetParmVarDeclAtIndexPos(*this, KWLoc, TSInfo, MD, IdxArgs[1]);
+      //if (!PD)
+        //return ExprError();
+      //const FunctionDecl *FD = RequireFunctionType(*this, KWLoc, TSInfo/*, true*/);
+      //if (!FD) return ExprError();
+
+      //Value = AllocateStringLiteral(Context, KWLoc, VType, PD->getName()); //default
+      //break;
+    //}
+
+    ///__record_function_param_identifier(T,I,P)
     case RTT_RecordMethodParamIdentifier: { 
       // Complete definition required!
       const CXXMethodDecl *MD = GetRecordMethodAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);

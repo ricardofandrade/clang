@@ -130,6 +130,8 @@ namespace clang {
     RTT_RecordMemberFieldIsAnonBitField,
     RTT_RecordMemberFieldIsReference,
 
+    RTT_FunctionParamIdentifier,
+
     RTT_RecordMethodCount,
     RTT_RecordMethodIdentifier,
     RTT_RecordMethodParamIdentifier,
