@@ -2000,6 +2000,8 @@ static const char *getTypeTraitName(ReflectionTypeTrait RTT) {
   case RTT_RecordMemberFieldIsReference:
     return "__record_member_field_is_reference";
 
+  case RTT_Identifier:
+    return "__identifier";
   case RTT_FunctionParamIdentifier:
     return "__function_param_identifier";
 

@@ -3992,7 +3992,7 @@ FieldDecl *clang::GetRecordMemberFieldAtIndexPos(Sema& S, SourceLocation KWLoc,
 #if 1  //todo >>
 
 static int RequireValidIndex(Sema& S, SourceLocation KWLoc,
-  TypeSourceInfo *TSInfo, Expr *IdxExpr, size_t MaxIdx, unsigned DiagID)
+  QualType type, Expr *IdxExpr, size_t MaxIdx, unsigned DiagID)
 {
   // Evaluate the index expression, error on Idx < 0
   llvm::APSInt IdxValue;
@@ -4011,7 +4011,7 @@ static int RequireValidIndex(Sema& S, SourceLocation KWLoc,
   // .. and Idx >= count
   if (Idx >= MaxIdx) {
     S.Diag(KWLoc, DiagID)
-      << (int)MaxIdx << TSInfo->getType() << IdxExpr->getSourceRange();
+      << (int)MaxIdx << type << IdxExpr->getSourceRange();
     return -1;
   }
 
@@ -4031,7 +4031,7 @@ const CXXMethodDecl *clang::GetRecordMethodAtIndexPos(Sema& S, SourceLocation KW
   // Evaluate the index expression, error on Idx < 0
   size_t MaxIdx = std::distance(RD->method_begin(), RD->method_end());
   //TODO:  change this to RequireValidMethodIndex() !
-  int Idx = RequireValidIndex(S, KWLoc, TSInfo, IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
+  int Idx = RequireValidIndex(S, KWLoc, TSInfo->getType(), IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
   if (Idx < 0)
     return 0;
 
@@ -4053,7 +4053,7 @@ const FriendDecl * clang::GetRecordFriendAtIndexPos(Sema& S, SourceLocation KWLo
   // Evaluate the index expression, error on Idx < 0
   size_t MaxIdx = std::distance(RD->friend_begin(), RD->friend_end());
   //TODO:  change this to RequireValidMethodIndex() !
-  int Idx = RequireValidIndex(S, KWLoc, TSInfo, IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
+  int Idx = RequireValidIndex(S, KWLoc, TSInfo->getType(), IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
   if (Idx < 0)
     return 0;
 
@@ -4066,13 +4066,13 @@ const FriendDecl * clang::GetRecordFriendAtIndexPos(Sema& S, SourceLocation KWLo
 
 // param name
 const ParmVarDecl * /* clang:: */ GetParmVarDeclAtIndexPos(Sema& S, SourceLocation KWLoc,
-                                                       TypeSourceInfo *TSInfo, 
+                                                       QualType type,
                                                        const FunctionDecl *MD, Expr *IdxExpr)
 {
     // Evaluate the index expression, error on Idx < 0
     size_t MaxIdx = std::distance(MD->param_begin(), MD->param_end());
     //TODO:  change this to RequireParamIndex() !
-    int Idx = RequireValidIndex(S, KWLoc, TSInfo, IdxExpr, MaxIdx, diag::err_reflection_parameter_index_out_of_range);
+    int Idx = RequireValidIndex(S, KWLoc, type, IdxExpr, MaxIdx, diag::err_reflection_parameter_index_out_of_range);
     if (Idx < 0)
         return 0;
 
@@ -4098,7 +4098,7 @@ const Decl * clang::GetNamespaceDeclAtIndexPos(Sema& S, SourceLocation KWLoc,
       MaxIdx += std::distance(I->decls_begin(), I->decls_end());
   }
 
-  int Idx = RequireValidIndex(S, KWLoc, TSInfo, IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
+  int Idx = RequireValidIndex(S, KWLoc, TSInfo->getType(), IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
   if (Idx < 0)
     return 0;
 
@@ -4262,8 +4262,12 @@ ExprResult Sema::BuildReflectionExpr(ReflectionTypeTrait RTT,
                                      ArrayRef<Expr*> IdxArgs,
                                      SourceLocation RParen)
 {
-  // the default for a unknown type is DependentTy
   QualType VType = Context.DependentTy;
+  if (RTT == RTT_FunctionParamIdentifier) {
+    const ParmVarDecl* parm = GetParmVarDeclAtIndexPos(*this, KWLoc, DRE->getDecl()->getType(), cast<FunctionDecl>(DRE->getFoundDecl()), IdxArgs[0]);
+    return AllocateStringLiteral(Context, KWLoc, VType, parm->getName());
+  }
+  // the default for a unknown type is DependentTy
   return AllocateStringLiteral(Context, KWLoc, VType, DRE->getFoundDecl()->getName());
 }
 
@@ -4892,7 +4896,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       const CXXMethodDecl *MD = GetRecordMethodAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
       if (!MD)
         return ExprError();
-      const ParmVarDecl *PD = GetParmVarDeclAtIndexPos(*this, KWLoc, TSInfo, MD, IdxArgs[1]);
+      const ParmVarDecl *PD = GetParmVarDeclAtIndexPos(*this, KWLoc, TSInfo->getType(), MD, IdxArgs[1]);
       if (!PD)
        return ExprError();
       //const FunctionDecl *FD = RequireFunctionType(*this, KWLoc, TSInfo/*, true*/);

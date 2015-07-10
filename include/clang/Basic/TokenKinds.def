@@ -453,6 +453,7 @@ KEYWORD(__record_member_field_bit_field_size   , KEYCXX)
 KEYWORD(__record_member_field_is_anon_bit_field, KEYCXX)
 KEYWORD(__record_member_field_is_reference     , KEYCXX)
 
+KEYWORD(__identifier  , KEYCXX)
 KEYWORD(__function_param_identifier  , KEYCXX)
 
 // member function traits

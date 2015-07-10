@@ -2884,6 +2884,7 @@ static ReflectionTypeTrait ReflectionTypeTraitFromTokKind(tok::TokenKind kind) {
   case tok::kw___record_member_field_is_anon_bit_field: return RTT_RecordMemberFieldIsAnonBitField;
   case tok::kw___record_member_field_is_reference: return RTT_RecordMemberFieldIsReference;
 
+  case tok::kw___identifier:   return RTT_Identifier;
   case tok::kw___function_param_identifier:   return RTT_FunctionParamIdentifier;
 
   case tok::kw___record_method_count:        return RTT_RecordMethodCount;
@@ -2918,7 +2919,7 @@ ExprResult Parser::ParseReflectionTypeTrait() {
   SmallVector<Expr*, 2> Args;
 
   ParsedType PT;
-  if (RTT == RTT_FunctionParamIdentifier) {
+  if (RTT == RTT_Identifier || RTT == RTT_FunctionParamIdentifier) {
     assert(Tok.is(tok::identifier));
 
     const bool EnteringContext = false;
@@ -2950,7 +2951,7 @@ ExprResult Parser::ParseReflectionTypeTrait() {
     switch (Classification.getKind()) {
     case Sema::NC_Expression: {
       ExprResult ER = Classification.getExpression();
-      /*{
+      if (RTT == RTT_FunctionParamIdentifier) {
         // Parse comma and then expression
         if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
           Parens.skipToEnd();
@@ -2962,9 +2963,7 @@ ExprResult Parser::ParseReflectionTypeTrait() {
           return ExprError();
         }
         Args.push_back(IdxExpr.get());
-
-        // fall through!
-      }*/
+      }
       Parens.consumeClose();
       return Actions.ActOnReflectionExpr(RTT, Loc, ER,
         Args, Parens.getCloseLocation());

@@ -1264,6 +1264,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   case tok::kw___record_member_field_is_anon_bit_field:
   case tok::kw___record_member_field_is_reference:
 
+  case tok::kw___identifier:
   case tok::kw___function_param_identifier:
 
   case tok::kw___record_method_count:
