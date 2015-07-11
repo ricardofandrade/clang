@@ -6139,6 +6139,9 @@ def warn_unused_comparison : Warning<
 def note_inequality_comparison_to_or_assign : Note<
   "use '|=' to turn this inequality comparison into an or-assignment">;
 
+def err_func_type_required_for_reflection_type_trait_epr : Error<
+  "type %0 is no function type as required for reflection">;
+
 def err_enum_type_required_for_reflection_type_trait_epr : Error<
   "type %0 is no enumeration type as required for reflection">;
 def err_enum_has_no_enumerators : Error<

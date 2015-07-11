@@ -4065,6 +4065,22 @@ const FriendDecl * clang::GetRecordFriendAtIndexPos(Sema& S, SourceLocation KWLo
 }
 
 // param name
+const QualType /* clang:: */ GetParmVarTypeAtIndexPos(Sema& S, SourceLocation KWLoc,
+                                                           QualType type,
+                                                           const FunctionProtoType* FT, Expr *IdxExpr)
+{
+  // Evaluate the index expression, error on Idx < 0
+  size_t MaxIdx = FT->getNumParams();
+  //TODO:  change this to RequireParamIndex() !
+  int Idx = RequireValidIndex(S, KWLoc, type, IdxExpr, MaxIdx, diag::err_reflection_parameter_index_out_of_range);
+  if (Idx < 0)
+    return QualType();
+
+  // Get the requested field decl
+  return FT->getParamType(Idx);
+}
+
+// param name
 const ParmVarDecl * /* clang:: */ GetParmVarDeclAtIndexPos(Sema& S, SourceLocation KWLoc,
                                                        QualType type,
                                                        const FunctionDecl *MD, Expr *IdxExpr)
@@ -4874,21 +4890,33 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
                              }
 
     ///__function_param_identifier(T,P)
-    //case RTT_FunctionParamIdentifier: {
+    case RTT_FunctionParamIdentifier: {
 
-      //const FunctionDecl *MD = RequireFunctionType(*this, KWLoc, TSInfo);
-      //if (!MD)
-        //return ExprError();
+      QualType T = TSInfo->getType().getCanonicalType().getNonReferenceType();
 
-      //const ParmVarDecl *PD = GetParmVarDeclAtIndexPos(*this, KWLoc, TSInfo, MD, IdxArgs[1]);
-      //if (!PD)
-        //return ExprError();
-      //const FunctionDecl *FD = RequireFunctionType(*this, KWLoc, TSInfo/*, true*/);
-      //if (!FD) return ExprError();
+      // check if T is func
+      if (!T->isFunctionProtoType()) {
+        Diag(KWLoc, diag::err_func_type_required_for_reflection_type_trait_epr) //TODO <<<
+        << T << TSInfo->getTypeLoc().getSourceRange();
+        return ExprError();
+      }
 
-      //Value = AllocateStringLiteral(Context, KWLoc, VType, PD->getName()); //default
-      //break;
-    //}
+        // Get the enum declaration
+      const FunctionProtoType *FT = T->getAs<FunctionProtoType>();
+      if (!FT)
+        return ExprError();
+
+      T = GetParmVarTypeAtIndexPos(*this, KWLoc, TSInfo->getType(), FT, IdxArgs[0]);
+      if (T.isNull())
+        return ExprError();
+
+      PrintingPolicy PP(LangOpts);
+      PP.SuppressTagKeyword = true;   // no 'struct', 'class'...
+      PP.SuppressUnwrittenScope = true;   // do not add <anonymous>:: if type is defined in anon. NS
+      // ^-- also has the result that inline namespaces are not specified.. which should be okay
+      Value = AllocateStringLiteral(Context, KWLoc, VType, T.getCanonicalType().getAsString(PP));
+      break;
+    }
 
     ///__record_function_param_identifier(T,I,P)
     case RTT_RecordMethodParamIdentifier: { 

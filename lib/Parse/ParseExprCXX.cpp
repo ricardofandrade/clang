@@ -2967,10 +2967,13 @@ ExprResult Parser::ParseReflectionTypeTrait() {
       Parens.consumeClose();
       return Actions.ActOnReflectionExpr(RTT, Loc, ER,
         Args, Parens.getCloseLocation());
-    }
+    } break;
 
     case Sema::NC_Type:
       PT = Classification.getType();
+      if (RTT == RTT_Identifier) {
+        RTT = RTT_TypeCanonicalName;
+      }
       break;
     case Sema::NC_Unknown:
     case Sema::NC_Error:
@@ -3018,7 +3021,6 @@ ExprResult Parser::ParseReflectionTypeTrait() {
     // Nothing more to parse
     break;
 
-
     // 2 arguments...
   case RTT_ObjectMemberFieldRef:
   case RTT_RecordMethodParamIdentifier:
@@ -3037,6 +3039,7 @@ ExprResult Parser::ParseReflectionTypeTrait() {
 
       // fall through!
     }
+  case RTT_FunctionParamIdentifier:
 
     // 1+ arguments...
   case RTT_EnumeratorValue:
