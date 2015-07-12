@@ -4893,18 +4893,19 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
     case RTT_FunctionParamIdentifier: {
 
       QualType T = TSInfo->getType().getCanonicalType().getNonReferenceType();
-
-      // check if T is func
-      if (!T->isFunctionProtoType()) {
-        Diag(KWLoc, diag::err_func_type_required_for_reflection_type_trait_epr) //TODO <<<
-        << T << TSInfo->getTypeLoc().getSourceRange();
-        return ExprError();
+      if (const PointerType* p = T->getAs<PointerType>()) {
+        T = p->getPointeeType();
+      } else if (const MemberPointerType* m = T->getAs<MemberPointerType>()) {
+        T = m->getPointeeType();
       }
-
         // Get the enum declaration
       const FunctionProtoType *FT = T->getAs<FunctionProtoType>();
-      if (!FT)
+      if (!FT) {
+        Diag(KWLoc, diag::err_func_type_required_for_reflection_type_trait_epr) //TODO <<<
+        << T << TSInfo->getTypeLoc().getSourceRange();
+        T->dump();
         return ExprError();
+      }
 
       T = GetParmVarTypeAtIndexPos(*this, KWLoc, TSInfo->getType(), FT, IdxArgs[0]);
       if (T.isNull())
