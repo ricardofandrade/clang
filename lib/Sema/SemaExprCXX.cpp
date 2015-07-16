@@ -3635,18 +3635,16 @@ ExprResult Sema::ActOnReflectionTypeTrait(ReflectionTypeTrait RTT,
   return BuildReflectionTypeTrait(RTT, KWLoc, TSInfo, IdxArgs, RParen);
 }
 
-#if 0
+#if 1
 ExprResult Sema::ActOnNamespaceTrait(ReflectionTypeTrait RTT,
                                      SourceLocation KWLoc,
-                                     Expr *Queried,
+                                     const NamespaceDecl *ND,
+                                     ArrayRef<Expr*> IdxArgs,
                                      SourceLocation RParen) {
-  // If error parsing the expression, ignore.
-  if (!Queried)
+  if (!ND)
     return ExprError();
 
-  ExprResult Result; // = BuildReflectionTypeTrait(RTT, KWLoc, Queried, RParen);
-  /// TODO 
-  return Result;
+  return BuildNamespaceTrait(RTT, KWLoc, ND, IdxArgs, RParen);
 }
 #endif
 
@@ -3811,28 +3809,6 @@ const CXXRecordDecl *clang::RequireRecordType(Sema& S, SourceLocation KWLoc,
   return RD;
 }
 
-#if 1 //TODO >>
-const DeclContext * clang::RequireNamespaceDecl(Sema& S, SourceLocation KWLoc,
-                                          TypeSourceInfo *TSInfo)
-{
-  //namespaces are not typed declarations, they have to be treated differently
-  //so we use some type inside this namespace to access it.
-  QualType QT = TSInfo->getType().getNonReferenceType();
-  const Type *T = QT.getTypePtr();
-
-  //NamespaceDecl *ND = 0;
-  const DeclContext *DC = 0;
-  //access namespace by any class that belong to it.
-  if (const RecordType *RT = T->getAs<RecordType>()) {
-    CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
-    //ND = cast<NamespaceDecl>(RD->getDeclContext());
-    DC = RD->getDeclContext();
-  }
-  return DC;
-  //return ND;
-}
-#endif
-
 #if 0   //TODO >>>
 typedef llvm::SmallPtrSet<const CXXRecordDecl*, 4> BaseSet;
 
@@ -3991,8 +3967,7 @@ FieldDecl *clang::GetRecordMemberFieldAtIndexPos(Sema& S, SourceLocation KWLoc,
 
 #if 1  //todo >>
 
-static int RequireValidIndex(Sema& S, SourceLocation KWLoc,
-  QualType type, Expr *IdxExpr, size_t MaxIdx, unsigned DiagID)
+static int RequireValidIndex(Sema& S, SourceLocation KWLoc, Expr *IdxExpr, size_t MaxIdx, unsigned DiagID)
 {
   // Evaluate the index expression, error on Idx < 0
   llvm::APSInt IdxValue;
@@ -4010,11 +3985,10 @@ static int RequireValidIndex(Sema& S, SourceLocation KWLoc,
 
   // .. and Idx >= count
   if (Idx >= MaxIdx) {
-    S.Diag(KWLoc, DiagID)
-      << (int)MaxIdx << type << IdxExpr->getSourceRange();
+    S.Diag(KWLoc, diag::err_reflection_field_index_out_of_range)
+      << IdxExpr->getSourceRange();
     return -1;
   }
-
   return static_cast<int>(Idx);
 }
 #endif 
@@ -4031,7 +4005,7 @@ const CXXMethodDecl *clang::GetRecordMethodAtIndexPos(Sema& S, SourceLocation KW
   // Evaluate the index expression, error on Idx < 0
   size_t MaxIdx = std::distance(RD->method_begin(), RD->method_end());
   //TODO:  change this to RequireValidMethodIndex() !
-  int Idx = RequireValidIndex(S, KWLoc, TSInfo->getType(), IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
+  int Idx = RequireValidIndex(S, KWLoc, IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
   if (Idx < 0)
     return 0;
 
@@ -4053,7 +4027,7 @@ const FriendDecl * clang::GetRecordFriendAtIndexPos(Sema& S, SourceLocation KWLo
   // Evaluate the index expression, error on Idx < 0
   size_t MaxIdx = std::distance(RD->friend_begin(), RD->friend_end());
   //TODO:  change this to RequireValidMethodIndex() !
-  int Idx = RequireValidIndex(S, KWLoc, TSInfo->getType(), IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
+  int Idx = RequireValidIndex(S, KWLoc, IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
   if (Idx < 0)
     return 0;
 
@@ -4072,7 +4046,7 @@ const QualType /* clang:: */ GetParmVarTypeAtIndexPos(Sema& S, SourceLocation KW
   // Evaluate the index expression, error on Idx < 0
   size_t MaxIdx = FT->getNumParams();
   //TODO:  change this to RequireParamIndex() !
-  int Idx = RequireValidIndex(S, KWLoc, type, IdxExpr, MaxIdx, diag::err_reflection_parameter_index_out_of_range);
+  int Idx = RequireValidIndex(S, KWLoc, IdxExpr, MaxIdx, diag::err_reflection_parameter_index_out_of_range);
   if (Idx < 0)
     return QualType();
 
@@ -4088,7 +4062,7 @@ const ParmVarDecl * /* clang:: */ GetParmVarDeclAtIndexPos(Sema& S, SourceLocati
     // Evaluate the index expression, error on Idx < 0
     size_t MaxIdx = std::distance(MD->param_begin(), MD->param_end());
     //TODO:  change this to RequireParamIndex() !
-    int Idx = RequireValidIndex(S, KWLoc, type, IdxExpr, MaxIdx, diag::err_reflection_parameter_index_out_of_range);
+    int Idx = RequireValidIndex(S, KWLoc, IdxExpr, MaxIdx, diag::err_reflection_parameter_index_out_of_range);
     if (Idx < 0)
         return 0;
 
@@ -4101,12 +4075,8 @@ const ParmVarDecl * /* clang:: */ GetParmVarDeclAtIndexPos(Sema& S, SourceLocati
 
 #if 1
 const Decl * clang::GetNamespaceDeclAtIndexPos(Sema& S, SourceLocation KWLoc,
-                                               TypeSourceInfo *TSInfo, Expr *IdxExpr)
+                                               const NamespaceDecl *ND, Expr *IdxExpr)
 {
-  const NamespaceDecl *ND = cast<NamespaceDecl>(RequireNamespaceDecl(S, KWLoc, TSInfo));
-  if (!ND)
-    return 0;
-
   // Evaluate the index expression, error on Idx < 0
   size_t MaxIdx = 0;
   for (NamespaceDecl::redecl_iterator
@@ -4114,7 +4084,7 @@ const Decl * clang::GetNamespaceDeclAtIndexPos(Sema& S, SourceLocation KWLoc,
       MaxIdx += std::distance(I->decls_begin(), I->decls_end());
   }
 
-  int Idx = RequireValidIndex(S, KWLoc, TSInfo->getType(), IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
+  int Idx = RequireValidIndex(S, KWLoc, IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
   if (Idx < 0)
     return 0;
 
@@ -4278,13 +4248,26 @@ ExprResult Sema::BuildReflectionExpr(ReflectionTypeTrait RTT,
                                      ArrayRef<Expr*> IdxArgs,
                                      SourceLocation RParen)
 {
+  Expr *Value = NULL;
+
   QualType VType = Context.DependentTy;
   if (RTT == RTT_FunctionParamIdentifier) {
     const ParmVarDecl* parm = GetParmVarDeclAtIndexPos(*this, KWLoc, DRE->getDecl()->getType(), cast<FunctionDecl>(DRE->getFoundDecl()), IdxArgs[0]);
-    return AllocateStringLiteral(Context, KWLoc, VType, parm->getName());
+    Value = AllocateStringLiteral(Context, KWLoc, VType, parm->getName());
   }
   // the default for a unknown type is DependentTy
-  return AllocateStringLiteral(Context, KWLoc, VType, DRE->getFoundDecl()->getName());
+  Value = AllocateStringLiteral(Context, KWLoc, VType, DRE->getFoundDecl()->getName());
+
+  // forward all the expr properties
+  VType = Value->getType();
+  ExprValueKind VKind = Value->getValueKind();
+  ExprObjectKind OKind = Value->getObjectKind();
+
+  assert((!Value || VKind == Value->getValueKind()) && "VKind != Value->getValueKind()!");
+
+  return ReflectionTypeTraitExpr::Create(Context, KWLoc, RTT, 
+                  Context.getTrivialTypeSourceInfo(VType, KWLoc),
+                  IdxArgs, RParen, VType, Value, VKind, OKind);
 }
 
 ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
@@ -4974,51 +4957,6 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       }
       break;
                                      }
-
-#if 1  //TODO >>>
-    ///__namespace_count(R)
-    case RTT_NamespaceCount: { 
-      const NamespaceDecl *ND = cast<NamespaceDecl>(RequireNamespaceDecl(*this, KWLoc, TSInfo));
-      if (!ND)
-        return ExprError();
-
-      //const NamespaceDecl *FirstND = ND->getOriginalNamespace();
-      const NamespaceDecl *MostRecentND = ND->getMostRecentDecl();
-      if (!MostRecentND)
-        return ExprError();
-
-      uint64_t total_cnt = 0;
-      for (NamespaceDecl::redecl_iterator
-           I = ND->redecls_begin(), E = ND->redecls_end(); I != E; ++I) {
-        total_cnt += std::distance(I->decls_begin(), I->decls_end());
-      }
-      // Count how many types are in this(current) namespace
-      //uint64_t cur_cnt = std::distance(ND->decls_begin(), ND->decls_end());
-      //llvm::errs() << " __namespace_count  " << total_cnt << " " << cur_cnt << "  \n";
-
-      llvm::APSInt apval = Context.MakeIntValue(total_cnt, VType);
-      Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
-      break;
-                                }
-
-
-    ///__namespace_identifier(N,I)
-    case RTT_NamespaceIdentifier: { 
-      const Decl *D = GetNamespaceDeclAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);     
-      if(!D)
-        return ExprError();
-      if (const NamedDecl *ND = dyn_cast<NamedDecl>(D) ) {
-        Value = AllocateStringLiteral(Context, KWLoc, VType, ND->getNameAsString());
-      } else {
-        //this should never happens
-        std::string str;
-        Value = AllocateStringLiteral(Context, KWLoc, VType, str);
-        llvm::errs() << " unknown friend identifier from __namespace_identifier \n";
-      }
-      break;
-                                }
-#endif
-
 #if 1 //TODO >>>
     ///__record_annotate_str(T)  //__annotate_str
     case RTT_AnnotateStr: { 
@@ -5075,6 +5013,73 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   assert((!Value || VKind == Value->getValueKind()) && "VKind != Value->getValueKind()!");
 
   return ReflectionTypeTraitExpr::Create(Context, KWLoc, RTT, TSInfo,
+                  IdxArgs, RParen, VType, Value, VKind, OKind);
+}
+
+ExprResult Sema::BuildNamespaceTrait(ReflectionTypeTrait RTT,
+                                     SourceLocation KWLoc,
+                                     const NamespaceDecl *ND,
+                                     ArrayRef<Expr*> IdxArgs,
+                                     SourceLocation RParen)
+{
+  Expr *Value = NULL;
+
+  QualType VType = Context.DependentTy;
+  switch (RTT) {
+    case RTT_Identifier:
+      Value = AllocateStringLiteral(Context, KWLoc, VType, ND->getName());
+#if 1  //TODO >>>
+    ///__namespace_count(R)
+    case RTT_NamespaceCount: { 
+      //const NamespaceDecl *FirstND = ND->getOriginalNamespace();
+      const NamespaceDecl *MostRecentND = ND->getMostRecentDecl();
+      if (!MostRecentND)
+        return ExprError();
+
+      uint64_t total_cnt = 0;
+      for (NamespaceDecl::redecl_iterator
+           I = ND->redecls_begin(), E = ND->redecls_end(); I != E; ++I) {
+        total_cnt += std::distance(I->decls_begin(), I->decls_end());
+      }
+      // Count how many types are in this(current) namespace
+      //uint64_t cur_cnt = std::distance(ND->decls_begin(), ND->decls_end());
+      //llvm::errs() << " __namespace_count  " << total_cnt << " " << cur_cnt << "  \n";
+
+      llvm::APSInt apval = Context.MakeIntValue(total_cnt, VType);
+      Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
+      break;
+                                }
+
+
+    ///__namespace_identifier(N,I)
+    case RTT_NamespaceIdentifier: { 
+      const Decl *D = GetNamespaceDeclAtIndexPos(*this, KWLoc, ND, IdxArgs[0]);     
+      if(!D)
+        return ExprError();
+      if (const NamedDecl *ND = dyn_cast<NamedDecl>(D) ) {
+        Value = AllocateStringLiteral(Context, KWLoc, VType, ND->getNameAsString());
+      } else {
+        //this should never happens
+        std::string str;
+        Value = AllocateStringLiteral(Context, KWLoc, VType, str);
+        llvm::errs() << " unknown friend identifier from __namespace_identifier \n";
+      }
+      break;
+                                }
+#endif
+    default:
+      llvm_unreachable("Unknown type trait or not implemented");
+  }  // switch
+
+  // forward all the expr properties
+  VType = Value->getType();
+  ExprValueKind VKind = Value->getValueKind();
+  ExprObjectKind OKind = Value->getObjectKind();
+
+  assert((!Value || VKind == Value->getValueKind()) && "VKind != Value->getValueKind()!");
+
+  return ReflectionTypeTraitExpr::Create(Context, KWLoc, RTT, 
+                  Context.getTrivialTypeSourceInfo(Context.DependentTy, KWLoc),
                   IdxArgs, RParen, VType, Value, VKind, OKind);
 }
 

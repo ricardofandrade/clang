@@ -5643,7 +5643,7 @@ static QualType ApplyQualRefFromOther(Sema& S, QualType T, QualType Model)
 
 QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
                                             ArrayRef<Expr*> IdxArgs,
-                                         ReflectionTransformType::RTTKind Kind,
+                                            ReflectionTransformType::RTTKind Kind,
                                             SourceLocation Loc) {
 
   QualType BaseType = TSInfo->getType();
@@ -5771,7 +5771,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
 #if 1  //TODO >>>
     ///  __namespace_type(R,I)
     case ReflectionTransformType::NamespaceType: { 
-      const Decl *D = GetNamespaceDeclAtIndexPos(*this, Loc, TSInfo, IdxArgs[0]);
+      const Decl *D = GetNamespaceDeclAtIndexPos(*this, Loc, nullptr, IdxArgs[0]);
       if (!D)
         return QualType();
       

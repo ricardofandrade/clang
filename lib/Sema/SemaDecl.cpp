@@ -698,7 +698,8 @@ Sema::NameClassification
 Sema::ClassifyName(Scope *S, CXXScopeSpec &SS, IdentifierInfo *&Name,
                    SourceLocation NameLoc, const Token &NextToken,
                    bool IsAddressOfOperand,
-                   std::unique_ptr<CorrectionCandidateCallback> CCC) {
+                   std::unique_ptr<CorrectionCandidateCallback> CCC,
+                   bool AllowNamespace) {
   DeclarationNameInfo NameInfo(Name, NameLoc);
   ObjCMethodDecl *CurMethod = getCurMethodDecl();
 
@@ -990,7 +991,10 @@ Corrected:
   if (FirstDecl->isCXXClassMember())
     return BuildPossibleImplicitMemberExpr(SS, SourceLocation(), Result,
                                            nullptr);
-
+  const NamespaceDecl* ND = nullptr;
+  if (AllowNamespace && Result.isSingleResult() && (ND = Result.getAsSingle<NamespaceDecl>())) {
+    return ND;
+  }
   bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
   return BuildDeclarationNameExpr(SS, Result, ADL);
 }

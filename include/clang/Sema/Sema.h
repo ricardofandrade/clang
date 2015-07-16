@@ -1471,6 +1471,7 @@ public:
     TemplateName Template;
     ParsedType Type;
     const IdentifierInfo *Keyword;
+    const NamespaceDecl* Namespace;
 
     explicit NameClassification(NameClassificationKind Kind) : Kind(Kind) {}
 
@@ -1481,6 +1482,9 @@ public:
 
     NameClassification(const IdentifierInfo *Keyword)
       : Kind(NC_Keyword), Keyword(Keyword) { }
+      
+    NameClassification(const NamespaceDecl* ND)
+      : Kind(NC_NestedNameSpecifier), Namespace(ND) { }
 
     static NameClassification Error() {
       return NameClassification(NC_Error);
@@ -1490,8 +1494,8 @@ public:
       return NameClassification(NC_Unknown);
     }
 
-    static NameClassification NestedNameSpecifier() {
-      return NameClassification(NC_NestedNameSpecifier);
+    static NameClassification NestedNameSpecifier(const NamespaceDecl* ND = nullptr) {
+      return NameClassification(ND);
     }
 
     static NameClassification TypeTemplate(TemplateName Name) {
@@ -1542,6 +1546,11 @@ public:
         llvm_unreachable("unsupported name classification.");
       }
     }
+    
+    const NamespaceDecl* getNamespaceDecl() const {
+      assert(Kind == NC_NestedNameSpecifier);
+      return Namespace;
+    }
   };
 
   /// \brief Perform name lookup on the given name, classifying it based on
@@ -1568,11 +1577,13 @@ public:
   ///        expression.
   ///
   /// \param CCC The correction callback, if typo correction is desired.
+  /// \param AllowNamespace A NamespaceDecl is acceptable as a valid result.
   NameClassification
   ClassifyName(Scope *S, CXXScopeSpec &SS, IdentifierInfo *&Name,
                SourceLocation NameLoc, const Token &NextToken,
                bool IsAddressOfOperand,
-               std::unique_ptr<CorrectionCandidateCallback> CCC = nullptr);
+               std::unique_ptr<CorrectionCandidateCallback> CCC = nullptr,
+               bool AllowNamespace = false);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
 
@@ -4534,6 +4545,7 @@ public:
                                       TypeSourceInfo *TSInfo,
                                       ArrayRef<Expr*> IdxArgs,
                                       SourceLocation RParen);
+                                      
   ExprResult ActOnReflectionExpr(ReflectionTypeTrait RTT,
                                  SourceLocation KWLoc,
                                  ExprResult LhsExpr,
@@ -4544,6 +4556,17 @@ public:
                                  DeclRefExpr *DRE,
                                  ArrayRef<Expr*> IdxArgs,
                                  SourceLocation RParen);
+
+  ExprResult ActOnNamespaceTrait(ReflectionTypeTrait RTT,
+                                 SourceLocation KWLoc,
+                                 const NamespaceDecl *ND,
+                                 ArrayRef<Expr*> IdxArgs,
+                                 SourceLocation RParen);
+  ExprResult BuildNamespaceTrait(ReflectionTypeTrait RTT,
+                                      SourceLocation KWLoc,
+                                      const NamespaceDecl *ND,
+                                      ArrayRef<Expr*> IdxArgs,
+                                      SourceLocation RParen);                                 
 
   /// \brief Parsed one of the type trait support pseudo-functions.
   ExprResult ActOnTypeTrait(TypeTrait Kind, SourceLocation KWLoc,

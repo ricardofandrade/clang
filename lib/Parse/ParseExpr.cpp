@@ -1280,8 +1280,8 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
 
   case tok::kw___namespace_identifier:
   case tok::kw___namespace_count:
-    return ParseReflectionTypeTrait();
-  //  return ParseNamespaceReflectionTrait();
+  //  return ParseReflectionTypeTrait();
+    return ParseNamespaceReflectionTrait();
       
   case tok::kw___array_rank:
   case tok::kw___array_extent:

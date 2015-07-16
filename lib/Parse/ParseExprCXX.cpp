@@ -2946,7 +2946,7 @@ ExprResult Parser::ParseReflectionTypeTrait() {
     // jump back into scope specifier parsing).
     Sema::NameClassification Classification = Actions.ClassifyName(
             getCurScope(), SS, Name, NameLoc, Next, false /*IsAddressOfOperand*/,
-            nullptr /*CCC*/);
+            nullptr /*CCC*/, true /*AllowNamespace*/);
 
     switch (Classification.getKind()) {
     case Sema::NC_Expression: {
@@ -2972,13 +2972,16 @@ ExprResult Parser::ParseReflectionTypeTrait() {
     case Sema::NC_Type:
       PT = Classification.getType();
       if (RTT == RTT_Identifier) {
-        RTT = RTT_TypeCanonicalName;
+        RTT = RTT_TypeSugaredName;
       }
       break;
+    case Sema::NC_NestedNameSpecifier:
+      Parens.consumeClose();
+      return Actions.ActOnNamespaceTrait(RTT, Loc, Classification.getNamespaceDecl(), Args, Parens.getCloseLocation());
+    
     case Sema::NC_Unknown:
     case Sema::NC_Error:
-    case Sema::NC_Keyword:
-    case Sema::NC_NestedNameSpecifier:
+    case Sema::NC_Keyword:    
     case Sema::NC_TypeTemplate:
     case Sema::NC_VarTemplate:
     case Sema::NC_FunctionTemplate:
@@ -3014,8 +3017,6 @@ ExprResult Parser::ParseReflectionTypeTrait() {
 
   case RTT_RecordMethodCount:
   case RTT_RecordFriendCount:
-
-  case RTT_NamespaceCount:
 
   case RTT_AnnotateStr:
     // Nothing more to parse
@@ -3061,7 +3062,6 @@ ExprResult Parser::ParseReflectionTypeTrait() {
   case RTT_RecordMethodInfo:
 
   case RTT_RecordFriendIdentifier:
-  case RTT_NamespaceIdentifier:
     {
     // Parse comma and then expression
     if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
@@ -3087,7 +3087,7 @@ ExprResult Parser::ParseReflectionTypeTrait() {
     Args, Parens.getCloseLocation());
 }
 
-#if 0
+#if 1
 /// ParseReflectionTrait - Parse ....
 ///
 ///       primary-expression:
@@ -3097,16 +3097,69 @@ ExprResult Parser::ParseNamespaceReflectionTrait() {
   ReflectionTypeTrait RTT = ReflectionTypeTraitFromTokKind(Tok.getKind());
   SourceLocation Loc = ConsumeToken();
 
-  BalancedDelimiterTracker T(*this, tok::l_paren);
-  if (T.expectAndConsume(diag::err_expected_lparen))
+  BalancedDelimiterTracker Parens(*this, tok::l_paren);
+  if (Parens.expectAndConsume(diag::err_expected_lparen_after))
     return ExprError();
 
-  ExprResult Expr = ParseExpression();
+  SmallVector<Expr*, 2> Args;
 
-  T.consumeClose();
+  const bool EnteringContext = false;
 
-  return Actions.ActOnNamespaceTrait(RTT, Loc, Expr.get(),
-    T.getCloseLocation());
+  CXXScopeSpec SS;
+  if (getLangOpts().CPlusPlus &&
+      ParseOptionalCXXScopeSpecifier(SS, ParsedType(), EnteringContext)) {
+    return ExprError();
+  }
+
+  if (Tok.isNot(tok::identifier) || SS.isInvalid()) {
+    return ExprError();
+  }
+
+  IdentifierInfo *Name = Tok.getIdentifierInfo();
+  SourceLocation NameLoc = Tok.getLocation();
+  ConsumeToken();
+
+  Token Next = NextToken();
+
+  // Look up and classify the identifier. We don't perform any typo-correction
+  // after a scope specifier, because in general we can't recover from typos
+  // there (eg, after correcting 'A::tempalte B<X>::C' [sic], we would need to
+  // jump back into scope specifier parsing).
+  Sema::NameClassification Classification = Actions.ClassifyName(
+          getCurScope(), SS, Name, NameLoc, Next, false /*IsAddressOfOperand*/,
+          nullptr /*CCC*/, true);
+
+  switch (Classification.getKind()) {
+  case Sema::NC_NestedNameSpecifier:
+    if(RTT == RTT_NamespaceIdentifier) {
+      // Parse comma and then expression
+      if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
+        Parens.skipToEnd();
+        return ExprError();
+      }
+  
+      ExprResult IdxExpr = ParseAssignmentExpression();
+      if (IdxExpr.isInvalid()) {
+        Parens.skipToEnd();
+        return ExprError();
+      }
+      Args.push_back(IdxExpr.get());
+    } else if (RTT != RTT_NamespaceCount) {
+      return ExprError();
+    } break;
+  case Sema::NC_Expression:
+  case Sema::NC_Type:
+  case Sema::NC_Unknown:
+  case Sema::NC_Error:
+  case Sema::NC_Keyword:    
+  case Sema::NC_TypeTemplate:
+  case Sema::NC_VarTemplate:
+  case Sema::NC_FunctionTemplate:
+    return ExprError();
+  }
+    
+  Parens.consumeClose();
+  return Actions.ActOnNamespaceTrait(RTT, Loc, Classification.getNamespaceDecl(), Args, Parens.getCloseLocation());
 }
 #endif
 

@@ -326,7 +326,7 @@ const FriendDecl *GetRecordFriendAtIndexPos(Sema& S, SourceLocation KWLoc,
 const DeclContext *RequireNamespaceDecl(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo);
 const Decl *GetNamespaceDeclAtIndexPos(Sema& S, SourceLocation KWLoc,
-  TypeSourceInfo *TSInfo, Expr *IdxExpr);
+  const NamespaceDecl* ND, Expr *IdxExpr);
 
 } // end namespace clang
 
