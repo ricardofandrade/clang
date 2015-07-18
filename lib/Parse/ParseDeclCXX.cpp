@@ -927,11 +927,31 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
   if (Parens.expectAndConsume(diag::err_expected_lparen_after)) {
       return;
   }
-
-  TypeResult Ty = ParseTypeName();
-  if (Ty.isInvalid()) {
-    Parens.skipToEnd();
-    return;
+  
+  TypeResult Ty = ParsedType();
+  /*const NamespaceDecl* ND = nullptr;
+  TentativeParsingAction PA(*this);
+  if (TagType == DeclSpec::TST_meta_namespaceType) {
+    
+    // Parse optional nested-name-specifier
+    CXXScopeSpec SS;
+    ParseOptionalCXXScopeSpecifier(SS, Ty.get(), /*EnteringContext=/false);
+      
+    IdentifierInfo *Id = Tok.getIdentifierInfo();
+    SourceLocation IdLoc = ConsumeToken();
+  
+    ND = Actions.GetAsNamespaceDecl(getCurScope(), SS, Id, IdLoc, NextToken());
+  }
+  if (ND) {
+    PA.Commit();
+  } else */{
+    //PA.Revert();
+  
+    Ty = ParseTypeName();
+    if (Ty.isInvalid()) {
+      Parens.skipToEnd();
+      return;
+    }
   }
 
   SmallVector<Expr*, 1> Args;

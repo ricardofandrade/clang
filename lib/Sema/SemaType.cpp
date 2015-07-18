@@ -1003,12 +1003,16 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_RecordFriendType:
   case DeclSpec::TST_meta_namespaceType:
       {
-    TypeSourceInfo *TSInfo = 0;
-    Result = S.GetTypeFromParser(DS.getRepAsType(), &TSInfo);
-    assert(!Result.isNull() && "Didn't get a type for reflection transform type?");
-    if (!TSInfo)
-      TSInfo = Context.getTrivialTypeSourceInfo(Result);
-
+    TypeSourceInfo *TSInfo = nullptr;
+    const NamespaceDecl* ND = nullptr;
+    if (DS.getTypeSpecType() != DeclSpec::TST_meta_namespaceType) {
+      Result = S.GetTypeFromParser(DS.getRepAsType(), &TSInfo);
+      assert(!Result.isNull() && "Didn't get a type for reflection transform type?");
+      if (!TSInfo)
+        TSInfo = Context.getTrivialTypeSourceInfo(Result);
+    } else {
+      ND = dyn_cast_or_null<NamespaceDecl>(DS.getRepAsDecl());
+    }
     ReflectionTransformType::RTTKind RTT;
     switch (DS.getTypeSpecType()) {
     case DeclSpec::TST_recordVirtualBaseType:
@@ -1038,7 +1042,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = S.BuildReflectionTransformType(TSInfo,
                                             DS.getParamExprs(),
                                             RTT,
-                                            DS.getTypeSpecTypeLoc());
+                                            DS.getTypeSpecTypeLoc(),
+                                            ND);
     if (Result.isNull()) {
       Result = Context.IntTy;
       declarator.setInvalidType(true);
@@ -3629,8 +3634,8 @@ namespace {
       // FIXME: Parameter expr SourceLocations are not stored!
       TL.setKWLoc(DS.getTypeSpecTypeLoc());
       TL.setParensRange(DS.getTypeofParensRange());
-      assert(DS.getRepAsType());
-      TypeSourceInfo *TInfo = 0;
+      assert(DS.getRepAsType() || DS.getRepAsDecl());
+      TypeSourceInfo *TInfo = nullptr;
       Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
       TL.setReflTInfo(TInfo);
       // setArgs()...
@@ -5644,9 +5649,10 @@ static QualType ApplyQualRefFromOther(Sema& S, QualType T, QualType Model)
 QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
                                             ArrayRef<Expr*> IdxArgs,
                                             ReflectionTransformType::RTTKind Kind,
-                                            SourceLocation Loc) {
+                                            SourceLocation Loc,
+                                            const NamespaceDecl* ND) {
 
-  QualType BaseType = TSInfo->getType();
+  QualType BaseType = TSInfo ? TSInfo->getType() : Context.DependentTy;
   QualType Reflected = Context.DependentTy;  // better than BaseType!
 
 
@@ -5771,7 +5777,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
 #if 1  //TODO >>>
     ///  __namespace_type(R,I)
     case ReflectionTransformType::NamespaceType: { 
-      const Decl *D = GetNamespaceDeclAtIndexPos(*this, Loc, nullptr, IdxArgs[0]);
+      const Decl *D = GetNamespaceDeclAtIndexPos(*this, Loc, ND, IdxArgs[0]);
       if (!D)
         return QualType();
       

@@ -416,8 +416,7 @@ private:
             T == TST_recordBaseType || 
             T == TST_recordDirectBaseType || T == TST_recordVirtualBaseType ||
             T == TST_RecordMemberFieldType || T == TST_RecordMemberFieldType ||
-            T == TST_RecordMethodType || T == TST_RecordFriendType ||
-            T == TST_meta_namespaceType);
+            T == TST_RecordMethodType || T == TST_RecordFriendType);
   }
   static bool isExprRep(TST T) {
     return (T == TST_typeofExpr || T == TST_decltype);
@@ -434,7 +433,7 @@ public:
   static bool isDeclRep(TST T) {
     return (T == TST_enum || T == TST_struct ||
             T == TST_interface || T == TST_union ||
-            T == TST_class);
+            T == TST_class || T == TST_meta_namespaceType);
   }
 
   DeclSpec(AttributeFactory &attrFactory)

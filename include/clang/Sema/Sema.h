@@ -1409,7 +1409,8 @@ public:
   QualType BuildReflectionTransformType(TypeSourceInfo *TSInfo,
                                         ArrayRef<Expr*> Exprs,
                                         ReflectionTransformType::RTTKind Kind,
-                                        SourceLocation Loc);
+                                        SourceLocation Loc,
+                                        const NamespaceDecl* ND);
 
   //===--------------------------------------------------------------------===//
   // Symbol table / Decl tracking callbacks: SemaDecl.cpp.

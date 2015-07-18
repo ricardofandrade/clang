@@ -4302,7 +4302,6 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   case RTT_RecordMemberFieldBitFieldSize:
   case RTT_RecordMethodCount:
   case RTT_RecordFriendCount:
-  case RTT_NamespaceCount:
     // always "size_t" result type:
     VType = Context.getSizeType();
     break;
@@ -4353,7 +4352,6 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   case RTT_RecordMethodIdentifier:
   case RTT_RecordMethodParamIdentifier:
   case RTT_RecordFriendIdentifier:
-  case RTT_NamespaceIdentifier:
   case RTT_AnnotateStr:
     // String literals are lvalues
     VKind = VK_LValue;
@@ -5028,6 +5026,7 @@ ExprResult Sema::BuildNamespaceTrait(ReflectionTypeTrait RTT,
   switch (RTT) {
     case RTT_Identifier:
       Value = AllocateStringLiteral(Context, KWLoc, VType, ND->getName());
+      break;
 #if 1  //TODO >>>
     ///__namespace_count(R)
     case RTT_NamespaceCount: { 
@@ -5045,11 +5044,11 @@ ExprResult Sema::BuildNamespaceTrait(ReflectionTypeTrait RTT,
       //uint64_t cur_cnt = std::distance(ND->decls_begin(), ND->decls_end());
       //llvm::errs() << " __namespace_count  " << total_cnt << " " << cur_cnt << "  \n";
 
+      VType = Context.getSizeType();
       llvm::APSInt apval = Context.MakeIntValue(total_cnt, VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
                                 }
-
 
     ///__namespace_identifier(N,I)
     case RTT_NamespaceIdentifier: { 

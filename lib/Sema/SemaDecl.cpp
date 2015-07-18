@@ -4308,9 +4308,22 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   // few cases here.
 
   DeclSpec &DS = D.getMutableDeclSpec();
+  NamespaceDecl* ND = nullptr;
   switch (DS.getTypeSpecType()) {
+  case DeclSpec::TST_meta_namespaceType: {
+    LookupResult Result(S, Name.getAsIdentifierInfo(), D.getIdentifierLoc(), Sema::LookupOrdinaryName);
+    S.LookupParsedName(Result, S.getCurScope(), &D.getCXXScopeSpec());
+    if (Result.isSingleResult()) {
+     ND = Result.getAsSingle<NamespaceDecl>();
+    }
+    DS.UpdateDeclRep(ND);
+  }
   case DeclSpec::TST_recordBaseType:
-  case DeclSpec::TST_recordVirtualBaseType: {
+  case DeclSpec::TST_recordDirectBaseType:
+  case DeclSpec::TST_recordVirtualBaseType:
+  case DeclSpec::TST_RecordMemberFieldType:
+  case DeclSpec::TST_RecordMethodType:
+  case DeclSpec::TST_RecordFriendType: {
     // Update all parameter expressions
     ArrayRef<Expr*> Args = DS.getParamExprs();
     SmallVector<Expr*, 2> NArgs;
@@ -4321,6 +4334,8 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
         NArgs.push_back(EResult.get());
     }
     DS.UpdateParamExprs(NArgs);
+    if (ND)
+      return true;
                                             }
     // fall through!
   case DeclSpec::TST_typename:

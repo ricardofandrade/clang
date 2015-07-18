@@ -10619,7 +10619,7 @@ QualType TreeTransform<Derived>::RebuildReflectionTransformType(TypeSourceInfo *
                                           ReflectionTransformType::RTTKind Kind,
                                           SourceLocation Loc)
 {
-    return SemaRef.BuildReflectionTransformType(TSInfo, Exprs, Kind, Loc);
+    return SemaRef.BuildReflectionTransformType(TSInfo, Exprs, Kind, Loc, nullptr);
 }
 
 template<typename Derived>
