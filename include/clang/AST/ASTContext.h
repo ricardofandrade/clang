@@ -1192,7 +1192,8 @@ public:
 
   QualType getReflectionTransformType(QualType BaseType, QualType ReflType,
                                       ArrayRef<Expr*> Exprs,
-                                      ReflectionTransformType::RTTKind Kind)
+                                      ReflectionTransformType::RTTKind Kind,
+                                      const NamespaceDecl* ND)
                                       const;
 
   /// \brief C++11 deduced auto type.

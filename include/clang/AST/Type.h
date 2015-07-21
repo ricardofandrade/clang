@@ -3384,11 +3384,14 @@ private:
 
   /// The index arguments, e.g. which nth base type is queried
   SmallVector<Expr*, 1> ArgExprs;
-
+  
   RTTKind RKind;
+
+  const NamespaceDecl* ND;
+
 protected:
   ReflectionTransformType(QualType BaseTy, QualType ReflectedTy, RTTKind Kind,
-    ArrayRef<Expr*> Args, QualType CanonicalTy);
+    ArrayRef<Expr*> Args, QualType CanonicalTy, const NamespaceDecl* ND);
   friend class ASTContext;
 public:
   bool isSugared() const { return !isDependentType(); } // ?
@@ -3399,6 +3402,8 @@ public:
 
   ArrayRef<Expr*> getParamExprs() const { return ArgExprs; }
 
+  const NamespaceDecl* getNamespaceDecl() const { return ND; }
+  
   RTTKind getRTTKind() const { return RKind; }
 
   static bool classof(const Type *T) {

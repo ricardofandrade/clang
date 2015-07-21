@@ -1657,6 +1657,10 @@ public:
   ArrayRef<Expr*> getParamExprs() const {
     return getTypePtr()->getParamExprs();
   }
+  
+  const NamespaceDecl* getNamespaceDecl() const {
+    return getTypePtr()->getNamespaceDecl();
+  }
 
   SourceRange getLocalSourceRange() const {
     return SourceRange(getKWLoc(), getRParenLoc());

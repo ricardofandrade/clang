@@ -853,8 +853,12 @@ void TypePrinter::printReflectionTransformBefore(const ReflectionTransformType *
       OS << "__namespace_type(";
       break;
   }
-  // Always print base type on which reflection happens
-  print(T->getBaseType(), OS, StringRef());
+  if (T->getRTTKind() == ReflectionTransformType::NamespaceType) {
+    T->getNamespaceDecl()->print(OS, Policy);
+  } else {
+    // Always print base type on which reflection happens
+    print(T->getBaseType(), OS, StringRef());
+  }
   // Print all given parameter exprs
   ArrayRef<Expr*> Args = T->getParamExprs();
   for (ArrayRef<Expr*>::const_iterator I = Args.begin(), E = Args.end();

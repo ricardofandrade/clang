@@ -284,6 +284,7 @@ void ASTTypeWriter::VisitReflectionTransformType(const ReflectionTransformType *
   for (ArrayRef<Expr*>::const_iterator I = Args.begin(), E = Args.end();
        I != E; ++I)
     Writer.AddStmt(*I);
+  Writer.AddDeclRef(T->getNamespaceDecl(), Record);
   Code = TYPE_REFLECTION_TRANSFORM;
 }
 

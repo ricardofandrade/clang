@@ -1711,10 +1711,12 @@ QualType ASTNodeImporter::VisitReflectionTransformType(const ReflectionTransform
        I != E; ++I)
     ToArgs.push_back(Importer.Import(*I));
 
+  const NamespaceDecl* ND = T->getNamespaceDecl();
   return Importer.getToContext().getReflectionTransformType(ToBaseType,
     ToReflType,
     ToArgs,
-    T->getRTTKind());
+    T->getRTTKind(),
+    ND);
 }
 
 QualType ASTNodeImporter::VisitAutoType(const AutoType *T) {

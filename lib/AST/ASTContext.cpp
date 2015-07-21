@@ -3803,12 +3803,13 @@ QualType ASTContext::getUnaryTransformType(QualType BaseType,
 QualType ASTContext::getReflectionTransformType(QualType BaseType,
                                                 QualType ReflType,
                                                 ArrayRef<Expr*> Exprs,
-                                                ReflectionTransformType::RTTKind Kind)
+                                                ReflectionTransformType::RTTKind Kind,
+                                                const NamespaceDecl* ND)
   const {
     ReflectionTransformType *Ty =
       new (*this, TypeAlignment) ReflectionTransformType(BaseType, ReflType,
                                                          Kind, Exprs,
-        ReflType->isDependentType() ? QualType() : getCanonicalType(ReflType));
+        ReflType->isDependentType() ? QualType() : getCanonicalType(ReflType), ND);
     Types.push_back(Ty);
     return QualType(Ty, 0);
 }

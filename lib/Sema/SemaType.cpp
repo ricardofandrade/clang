@@ -5841,7 +5841,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
   }
 
   assert(!Reflected.isNull());
-  return Context.getReflectionTransformType(BaseType, Reflected, IdxArgs, Kind);
+  return Context.getReflectionTransformType(BaseType, Reflected, IdxArgs, Kind, ND);
 }
 
 QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {

@@ -1895,12 +1895,13 @@ ReflectionTransformType::ReflectionTransformType(QualType BaseTy,
                                                  QualType ReflectedTy,
                                                  RTTKind Kind,
                                                  ArrayRef<Expr*> Args,
-                                                 QualType CanonicalTy)
+                                                 QualType CanonicalTy,
+                                                 const NamespaceDecl* ND)
   : Type(ReflectionTransform, CanonicalTy, ReflectedTy->isDependentType(),
   BaseTy->isInstantiationDependentType(),
   BaseTy->isVariablyModifiedType(),
   BaseTy->containsUnexpandedParameterPack()),
-  BaseType(BaseTy), ReflectedType(ReflectedTy), RKind(Kind)
+  BaseType(BaseTy), ReflectedType(ReflectedTy), RKind(Kind), ND(ND)
 {
   for (unsigned I = 0; I != Args.size(); ++I) {
     // forward instant dep/unexpanded param pack info

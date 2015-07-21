@@ -5414,7 +5414,8 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
     SmallVector<Expr*, 2> Args;
     for (unsigned I = 0; I != NumArgs; ++I)
       Args.push_back(ReadExpr(*Loc.F));
-    return Context.getReflectionTransformType(BaseType, ReflType, Args, RKind);
+    const NamespaceDecl* ND = ReadDeclAs<NamespaceDecl>(*Loc.F, Record, Idx);
+    return Context.getReflectionTransformType(BaseType, ReflType, Args, RKind, ND);
   }
 
   case TYPE_AUTO: {
