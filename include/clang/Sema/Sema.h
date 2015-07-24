@@ -1394,6 +1394,8 @@ public:
                                                         Arg3);
     return RequireLiteralType(Loc, T, Diagnoser);
   }
+  
+  QualType getVoidType();
 
   QualType getElaboratedType(ElaboratedTypeKeyword Keyword,
                              const CXXScopeSpec &SS, QualType T);

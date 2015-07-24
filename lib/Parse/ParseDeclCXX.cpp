@@ -21,6 +21,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/PrettyDeclStackTrace.h"
 #include "clang/Sema/Scope.h"
@@ -928,30 +929,21 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
       return;
   }
   
-  TypeResult Ty = ParsedType();
-  /*const NamespaceDecl* ND = nullptr;
-  TentativeParsingAction PA(*this);
+  TypeResult Ty = ParsedType::make(Actions.getVoidType());
+  NamespaceDecl* ND = nullptr;
   if (TagType == DeclSpec::TST_meta_namespaceType) {
-    
-    // Parse optional nested-name-specifier
-    CXXScopeSpec SS;
-    ParseOptionalCXXScopeSpecifier(SS, Ty.get(), /*EnteringContext=/false);
-      
-    IdentifierInfo *Id = Tok.getIdentifierInfo();
-    SourceLocation IdLoc = ConsumeToken();
-  
-    ND = Actions.GetAsNamespaceDecl(getCurScope(), SS, Id, IdLoc, NextToken());
-  }
-  if (ND) {
-    PA.Commit();
-  } else */{
-    //PA.Revert();
-  
+    IdentifierInfo *TokenName = Tok.getIdentifierInfo();
+    LookupResult R(Actions, TokenName, SourceLocation(),
+                   Sema::LookupNamespaceName);
+    if (Actions.LookupParsedName(R, getCurScope(), nullptr) && R.isSingleResult() && (ND = R.getAsSingle<NamespaceDecl>())) {
+      ConsumeToken();
+    }    
+  } else {
     Ty = ParseTypeName();
     if (Ty.isInvalid()) {
       Parens.skipToEnd();
       return;
-    }
+    }    
   }
 
   SmallVector<Expr*, 1> Args;
@@ -983,6 +975,8 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
                          DiagID, Ty.get(), Args,
                          Actions.getASTContext().getPrintingPolicy()))
     Diag(StartLoc, DiagID) << PrevSpec;
+  else if (ND)
+    DS.UpdateDeclRep(ND);
 }
 
 /// ParseBaseTypeSpecifier - Parse a C++ base-type-specifier which is either a

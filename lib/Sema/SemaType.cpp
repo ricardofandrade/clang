@@ -5646,13 +5646,15 @@ static QualType ApplyQualRefFromOther(Sema& S, QualType T, QualType Model)
   return QT;
 }
 
+QualType Sema::getVoidType() { return Context.VoidTy; }
+
 QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
                                             ArrayRef<Expr*> IdxArgs,
                                             ReflectionTransformType::RTTKind Kind,
                                             SourceLocation Loc,
                                             const NamespaceDecl* ND) {
 
-  QualType BaseType = TSInfo ? TSInfo->getType() : Context.DependentTy;
+  QualType BaseType = TSInfo ? TSInfo->getType() : Context.VoidTy;
   QualType Reflected = Context.DependentTy;  // better than BaseType!
 
 

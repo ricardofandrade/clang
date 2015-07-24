@@ -416,7 +416,7 @@ private:
             T == TST_recordBaseType || 
             T == TST_recordDirectBaseType || T == TST_recordVirtualBaseType ||
             T == TST_RecordMemberFieldType || T == TST_RecordMemberFieldType ||
-            T == TST_RecordMethodType || T == TST_RecordFriendType);
+            T == TST_RecordMethodType || T == TST_RecordFriendType || T == TST_meta_namespaceType);
   }
   static bool isExprRep(TST T) {
     return (T == TST_typeofExpr || T == TST_decltype);
@@ -424,7 +424,7 @@ private:
   static bool isParameterizedRep(TST T) {
     return (T == TST_recordBaseType || T == TST_recordDirectBaseType || T == TST_recordVirtualBaseType ||
             T == TST_RecordMemberFieldType || T == TST_RecordMemberFieldType ||
-            T == TST_RecordMethodType || T == TST_RecordFriendType);
+            T == TST_RecordMethodType || T == TST_RecordFriendType || T == TST_meta_namespaceType);
   }
 
   DeclSpec(const DeclSpec &) LLVM_DELETED_FUNCTION;

@@ -4311,10 +4311,9 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   NamespaceDecl* ND = nullptr;
   switch (DS.getTypeSpecType()) {
   case DeclSpec::TST_meta_namespaceType: {
-    LookupResult Result(S, Name.getAsIdentifierInfo(), D.getIdentifierLoc(), Sema::LookupOrdinaryName);
-    S.LookupParsedName(Result, S.getCurScope(), &D.getCXXScopeSpec());
-    if (Result.isSingleResult()) {
-     ND = Result.getAsSingle<NamespaceDecl>();
+    LookupResult Result(S, Name.getAsIdentifierInfo(), D.getIdentifierLoc(), Sema::LookupNamespaceName);
+    if (S.LookupParsedName(Result, S.getCurScope(), &D.getCXXScopeSpec()) && Result.isSingleResult()) {
+      ND = Result.getAsSingle<NamespaceDecl>();
     }
     DS.UpdateDeclRep(ND);
   }
