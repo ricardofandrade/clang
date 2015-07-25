@@ -5784,54 +5784,63 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
         return QualType();
       
       QualType QT;
-      //TODO >>>
-      if (const TypedefNameDecl *TDD = dyn_cast<TypedefNameDecl>(D) ) { 
-        ///typedef
-        QualType QT = Context.getTypedefType(TDD);
-        Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
-      } else 
-      if (const TagDecl *TD = dyn_cast<TagDecl>(D) ) { 
-        ///(struct/union/class/enum)
-        QualType QT = Context.getTagDeclType(TD);
-        Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
-      } else 
-      if (/*const NamespaceDecl *ND = */dyn_cast<NamespaceDecl>(D) ) {
-          ///nested namespace
-          //const NamespaceDecl *FirstND = ND->getOriginalNamespace();
-          //const Decl *FirstD = FirstND->decls_begin();
-         // NamespaceDecl::decl_iterator It = FirstND->decls_begin();
-          //llvm::errs() << " namespace > " << ND->getName() << " < \n";
-          //TODO >>>
-          QualType QT = Context.VoidTy; //= QualType(TD->getTypeForDecl(),0);
+      while (true) {
+        if (const TypedefNameDecl *TDD = dyn_cast<TypedefNameDecl>(D) ) { 
+          ///typedef
+          QualType QT = Context.getTypedefType(TDD);
           Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
-      } else 
-      if (dyn_cast<UsingShadowDecl>(D) ) {
-        ///using ???
-        QualType QT = Context.VoidTy;
-        Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
-      } else
-      if (dyn_cast<UsingDecl>(D) ) {
-        ///using ???
-        QualType QT = Context.VoidTy;
-        Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
-      } else
-      if (const ValueDecl *VD = dyn_cast<ValueDecl>(D) ) { 
-        ///variable
-        QualType QT = VD->getType();
-        Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
-      } else 
-      if (const TypeDecl *TD = dyn_cast<TypeDecl>(D) ) { 
-        ///other types
-        QualType QT = Context.getTypeDeclType(TD);//QualType(TD->getTypeForDecl(),0);
-        Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
-      } else {
-        if (const NamedDecl *ND = dyn_cast<NamedDecl>(D) ) {
-          llvm::errs() << " named > " << ND->getName() << " " << ND->getKind() << " < \n";
+        } else 
+        if (const TagDecl *TD = dyn_cast<TagDecl>(D) ) { 
+          ///(struct/union/class/enum)
+          std::string TDN = TD->getNameAsString();
+          if (TDN.find("__namespace_") == 0 && TDN.find("_t") != 0) {
+            D = cast<NamespaceDecl>(TD->getDeclContext());
+            continue;
+          }
+          QualType QT = Context.getTagDeclType(TD);
+          Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
+        } else 
+        if (const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(D) ) {
+          //nested namespace
+          const NamespaceDecl *FirstND = ND->getOriginalNamespace();
+          std::string name = "__namespace_" + FirstND->getNameAsString() + "_t";
+          RecordDecl* NewDecl = RecordDecl::Create(
+            Context, clang::TTK_Struct, const_cast<NamespaceDecl *>(FirstND),
+            SourceLocation(), SourceLocation(), &Context.Idents.get(name));
+          NewDecl->setImplicit();
+          //PushOnScopeChains(NewDecl, getCurScope());
+          QualType QT = Context.getTagDeclType(NewDecl);
+          Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
+        } else 
+        if (const UsingShadowDecl* USD = dyn_cast<UsingShadowDecl>(D) ) {
+          ///using ???
+          D = USD->getTargetDecl();
+          continue;
+        } else
+        if (dyn_cast<UsingDecl>(D) ) {
+          ///using ???
+          QualType QT = Context.VoidTy;
+          Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
+        } else
+        if (const ValueDecl *VD = dyn_cast<ValueDecl>(D) ) { 
+          ///variable
+          QualType QT = VD->getType();
+          Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
+        } else 
+        if (const TypeDecl *TD = dyn_cast<TypeDecl>(D) ) { 
+          ///other types
+          QualType QT = Context.getTypeDeclType(TD);//QualType(TD->getTypeForDecl(),0);
+          Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
         } else {
-          llvm::errs() << " unnamed  " << ND->getKind() << " < \n";
+          if (const NamedDecl *ND = dyn_cast<NamedDecl>(D) ) {
+            llvm::errs() << " named > " << ND->getName() << " " << ND->getKind() << " < \n";
+          } else {
+            llvm::errs() << " unnamed  " << ND->getKind() << " < \n";
+          }
+          llvm::errs() << " unknown type from __namespace_type \n";
+          return QualType();
         }
-        llvm::errs() << " unknown type from __namespace_type \n";
-        return QualType();
+        break;
       }
       break;
                                                          }
