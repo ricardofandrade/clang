@@ -854,7 +854,7 @@ void TypePrinter::printReflectionTransformBefore(const ReflectionTransformType *
       break;
   }
   if (T->getRTTKind() == ReflectionTransformType::NamespaceType) {
-    T->getNamespaceDecl()->print(OS, Policy);
+    T->getNamespaceDecl()->printQualifiedName(OS, Policy);
   } else {
     // Always print base type on which reflection happens
     print(T->getBaseType(), OS, StringRef());
