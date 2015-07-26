@@ -68,6 +68,7 @@ namespace clang {
     TST_RecordMethodType,       //  __record_method_type
     TST_RecordFriendType,       //  __record_friend_type
     TST_meta_namespaceType,     //  __namespace_type
+    TST_meta_namespaceDecl,     //  __namespace_decl
     TST_unknown_anytype,  // __unknown_anytype extension
     TST_atomic,           // C11 _Atomic
     TST_error         // erroneous type

@@ -316,6 +316,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_RecordMethodType:
     case TST_RecordFriendType:
     case TST_meta_namespaceType:
+    case TST_meta_namespaceDecl:
       return false;
 
     case TST_decltype_auto:
@@ -487,6 +488,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_RecordMethodType: return "__record_method_type";
   case DeclSpec::TST_RecordFriendType: return "__record_friend_type";
   case DeclSpec::TST_meta_namespaceType: return "__namespace_type";
+  case DeclSpec::TST_meta_namespaceDecl: return "__namespace_decl";
   case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
   case DeclSpec::TST_atomic: return "_Atomic";
   case DeclSpec::TST_error:       return "(error)";

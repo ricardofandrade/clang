@@ -849,23 +849,32 @@ void TypePrinter::printReflectionTransformBefore(const ReflectionTransformType *
     case ReflectionTransformType::RecordFriendType:
       OS << "__record_friend_type(";
       break;
-    case ReflectionTransformType::NamespaceType:
+    case ReflectionTransformType::MetaNamespaceType:
       OS << "__namespace_type(";
       break;
+    case ReflectionTransformType::MetaNamespaceDecl:
+      OS << "__namespace_decl(";
+      break;
   }
-  if (T->getRTTKind() == ReflectionTransformType::NamespaceType) {
-    T->getNamespaceDecl()->printQualifiedName(OS, Policy);
+  if (T->getRTTKind() == ReflectionTransformType::MetaNamespaceType) {
+    const NamespaceDecl* ND = T->getNamespaceDecl();
+    if (!ND) {
+      OS << "::";
+    } else {
+      ND->printQualifiedName(OS, Policy);
+    }
   } else {
     // Always print base type on which reflection happens
     print(T->getBaseType(), OS, StringRef());
-  }
-  // Print all given parameter exprs
-  ArrayRef<Expr*> Args = T->getParamExprs();
-  for (ArrayRef<Expr*>::const_iterator I = Args.begin(), E = Args.end();
-       I != E; ++I) {
-    OS << ", ";
-    assert(*I && "ReflectionTransformExpr ParamExpr is null");
-    (*I)->printPretty(OS, 0, Policy);
+
+    // Print all given parameter exprs
+    ArrayRef<Expr*> Args = T->getParamExprs();
+    for (ArrayRef<Expr*>::const_iterator I = Args.begin(), E = Args.end();
+         I != E; ++I) {
+      OS << ", ";
+      assert(*I && "ReflectionTransformExpr ParamExpr is null");
+      (*I)->printPretty(OS, 0, Policy);
+    }
   }
   OS << ')';
   spaceBeforePlaceHolder(OS);

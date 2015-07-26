@@ -4075,13 +4075,19 @@ const ParmVarDecl * /* clang:: */ GetParmVarDeclAtIndexPos(Sema& S, SourceLocati
 
 #if 1
 const Decl * clang::GetNamespaceDeclAtIndexPos(Sema& S, SourceLocation KWLoc,
-                                               const NamespaceDecl *ND, Expr *IdxExpr)
+                                               const DeclContext *DC, Expr *IdxExpr)
 {
   // Evaluate the index expression, error on Idx < 0
   size_t MaxIdx = 0;
-  for (NamespaceDecl::redecl_iterator
-    I = ND->redecls_begin(), E = ND->redecls_end(); I != E; ++I) {
-      MaxIdx += std::distance(I->decls_begin(), I->decls_end());
+  const NamespaceDecl* ND = nullptr;
+  if (DC->isTranslationUnit()) {
+    MaxIdx = std::distance(DC->decls_begin(), DC->decls_end());
+  } else {
+    ND = cast<NamespaceDecl>(DC);
+    for (NamespaceDecl::redecl_iterator
+      I = ND->redecls_begin(), E = ND->redecls_end(); I != E; ++I) {
+        MaxIdx += std::distance(I->decls_begin(), I->decls_end());
+    }
   }
 
   int Idx = RequireValidIndex(S, KWLoc, IdxExpr, MaxIdx, diag::err_reflection_method_index_out_of_range);
@@ -4090,20 +4096,30 @@ const Decl * clang::GetNamespaceDeclAtIndexPos(Sema& S, SourceLocation KWLoc,
 
   // get required Decl from this namespace 
   // TODO   filter out all not types.
-  const Decl *D = 0;
+  const Decl *D = nullptr;
   int i = 0;
-  for (NamespaceDecl::redecl_iterator
-    ND_I = ND->redecls_begin(), ND_E = ND->redecls_end(); ND_I!=ND_E; ++ND_I) {
-      for (DeclContext::decl_iterator 
-        I = ND_I->decls_begin(), E = ND_I->decls_end(); I!=E; ++I) {
+  if (DC->isTranslationUnit()) {
+    for (DeclContext::decl_iterator 
+        I = DC->decls_begin(), E = DC->decls_end(); I!=E; ++I) {
           if(i==Idx) {
             D = *I;
             return D;
           }
           ++i;
       }
+  } else {
+    for (NamespaceDecl::redecl_iterator
+      ND_I = ND->redecls_begin(), ND_E = ND->redecls_end(); ND_I!=ND_E; ++ND_I) {
+        for (DeclContext::decl_iterator 
+          I = ND_I->decls_begin(), E = ND_I->decls_end(); I!=E; ++I) {
+            if(i==Idx) {
+              D = *I;
+              return D;
+            }
+            ++i;
+        }
+    }
   }
-
   return D;
 }
 #endif

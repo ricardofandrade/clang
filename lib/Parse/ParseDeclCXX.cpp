@@ -920,6 +920,8 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
     TagType = DeclSpec::TST_RecordFriendType;
   else if (TagTokKind == tok::kw___namespace_type)
     TagType = DeclSpec::TST_meta_namespaceType;
+  else if (TagTokKind == tok::kw___namespace_decl)
+    TagType = DeclSpec::TST_meta_namespaceDecl;
   else
     llvm_unreachable("Not a reflection type specifier");
 
@@ -931,39 +933,64 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
   
   TypeResult Ty = ParsedType::make(Actions.getVoidType());
   NamespaceDecl* ND = nullptr;
+  SmallVector<Expr*, 1> Args;
   if (TagType == DeclSpec::TST_meta_namespaceType) {
-    IdentifierInfo *TokenName = Tok.getIdentifierInfo();
-    LookupResult R(Actions, TokenName, SourceLocation(),
-                   Sema::LookupNamespaceName);
-    if (Actions.LookupParsedName(R, getCurScope(), nullptr) && R.isSingleResult() && (ND = R.getAsSingle<NamespaceDecl>())) {
-      ConsumeToken();
-    }    
+    CXXScopeSpec SS;
+    // Parse (optional) nested-name-specifier.
+    ParseOptionalCXXScopeSpecifier(SS, ParsedType(), /*EnteringContext=*/false);
+  
+    NestedNameSpecifier *NNS = SS.getScopeRep();
+    if (NNS->getKind() == NestedNameSpecifier::Global) {
+      DS.getTypeSpecScope() = SS;
+    } else { 
+      IdentifierInfo *NamespcName = nullptr;
+      SourceLocation IdentLoc = SourceLocation();
+    
+      // Parse namespace-name.
+      if (SS.isInvalid() || Tok.isNot(tok::identifier)) {
+        Diag(Tok, diag::err_expected_namespace_name);
+        Parens.skipToEnd();
+        return;
+      }
+    
+      // Parse identifier.
+      NamespcName = Tok.getIdentifierInfo();
+      IdentLoc = ConsumeToken();
+        
+      LookupResult R(Actions, NamespcName, IdentLoc,
+                     Sema::LookupNamespaceName);
+      if (Actions.LookupParsedName(R, getCurScope(), &SS) && R.isSingleResult() && (ND = R.getAsSingle<NamespaceDecl>())) {
+        DS.getTypeSpecScope() = SS;
+      } else {
+        Diag(Tok, diag::err_expected_namespace_name);
+        Parens.skipToEnd();
+        return;        
+      }
+    }
   } else {
     Ty = ParseTypeName();
     if (Ty.isInvalid()) {
       Parens.skipToEnd();
       return;
     }    
+
+    // TST_recordBaseType
+    // TST_recordVirtualBaseType
+    // both require one index parameter
+  
+    // Parse comma and then expression
+    if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
+      Parens.skipToEnd();
+      return;
+    }
+  
+    ExprResult IdxExpr = ParseExpression();
+    if (IdxExpr.isInvalid()) {
+      Parens.skipToEnd();
+      return;
+    }
+    Args.push_back(IdxExpr.get());
   }
-
-  SmallVector<Expr*, 1> Args;
-  // TST_recordBaseType
-  // TST_recordVirtualBaseType
-  // both require one index parameter
-
-  // Parse comma and then expression
-  if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
-    Parens.skipToEnd();
-    return;
-  }
-
-  ExprResult IdxExpr = ParseExpression();
-  if (IdxExpr.isInvalid()) {
-    Parens.skipToEnd();
-    return;
-  }
-  Args.push_back(IdxExpr.get());
-
   // Match the ')'
   Parens.consumeClose();
   if (Parens.getCloseLocation().isInvalid())

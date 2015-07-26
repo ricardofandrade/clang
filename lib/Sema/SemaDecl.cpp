@@ -126,6 +126,7 @@ bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
   case tok::kw___record_method_type:
   case tok::kw___record_friend_type:
   case tok::kw___namespace_type:
+  case tok::kw___namespace_decl:
     return getLangOpts().CPlusPlus;
 
   default:
@@ -4317,6 +4318,7 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
     }
     DS.UpdateDeclRep(ND);
   }
+  case DeclSpec::TST_meta_namespaceDecl:
   case DeclSpec::TST_recordBaseType:
   case DeclSpec::TST_recordDirectBaseType:
   case DeclSpec::TST_recordVirtualBaseType:

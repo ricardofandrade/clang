@@ -2920,13 +2920,8 @@ ExprResult Parser::ParseReflectionTypeTrait() {
 
   ParsedType PT;
   if (RTT == RTT_Identifier || RTT == RTT_FunctionParamIdentifier) {
-    assert(Tok.is(tok::identifier));
-
-    const bool EnteringContext = false;
-
     CXXScopeSpec SS;
-    if (getLangOpts().CPlusPlus &&
-        ParseOptionalCXXScopeSpecifier(SS, ParsedType(), EnteringContext)) {
+    if (ParseOptionalCXXScopeSpecifier(SS, ParsedType(), /*EnteringContext=*/false)) {
       return ExprError();
     }
 

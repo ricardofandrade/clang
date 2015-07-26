@@ -1002,16 +1002,17 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_RecordMethodType:
   case DeclSpec::TST_RecordFriendType:
   case DeclSpec::TST_meta_namespaceType:
+  case DeclSpec::TST_meta_namespaceDecl:
       {
     TypeSourceInfo *TSInfo = nullptr;
     const NamespaceDecl* ND = nullptr;
-    if (DS.getTypeSpecType() != DeclSpec::TST_meta_namespaceType) {
+    if (DS.getTypeSpecType() == DeclSpec::TST_meta_namespaceType) {
+      ND = dyn_cast_or_null<NamespaceDecl>(DS.getRepAsDecl());
+    } else {
       Result = S.GetTypeFromParser(DS.getRepAsType(), &TSInfo);
       assert(!Result.isNull() && "Didn't get a type for reflection transform type?");
       if (!TSInfo)
         TSInfo = Context.getTrivialTypeSourceInfo(Result);
-    } else {
-      ND = dyn_cast_or_null<NamespaceDecl>(DS.getRepAsDecl());
     }
     ReflectionTransformType::RTTKind RTT;
     switch (DS.getTypeSpecType()) {
@@ -1034,7 +1035,10 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       RTT = ReflectionTransformType::RecordFriendType;
       break;
     case DeclSpec::TST_meta_namespaceType:
-      RTT = ReflectionTransformType::NamespaceType;
+      RTT = ReflectionTransformType::MetaNamespaceType;
+      break;
+    case DeclSpec::TST_meta_namespaceDecl:
+      RTT = ReflectionTransformType::MetaNamespaceDecl;
       break;
     default:
       llvm_unreachable("Unknown ReflectionTransformType::RTTKind");
@@ -5775,11 +5779,39 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
       }
       break;
                                                          }
-
-#if 1  //TODO >>>
-    ///  __namespace_type(R,I)
-    case ReflectionTransformType::NamespaceType: { 
-      const Decl *D = GetNamespaceDeclAtIndexPos(*this, Loc, ND, IdxArgs[0]);
+    ///  __namespace_type(R)
+    case ReflectionTransformType::MetaNamespaceType: {
+        std::string name;
+        const DeclContext* DC = nullptr;
+        if (ND) {
+          const NamespaceDecl *FirstND = ND->getOriginalNamespace();
+          name = FirstND->isAnonymousNamespace()
+            ? "__anonymous__namespace_t"
+            : "__" + FirstND->getNameAsString() + "__namespace_t";
+          DC = const_cast<NamespaceDecl *>(FirstND);
+        } else {
+          name = "__global__namespace_t";
+          DC = Context.getTranslationUnitDecl();
+        }
+        RecordDecl* NewDecl = RecordDecl::Create(
+          Context, clang::TTK_Struct, const_cast<DeclContext*>(DC),
+          SourceLocation(), SourceLocation(), &Context.Idents.get(name));
+        NewDecl->setImplicit();
+        //PushOnScopeChains(NewDecl, getCurScope());
+        QualType QT = Context.getTagDeclType(NewDecl);
+        Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
+      }
+      break;
+    ///  __namespace_decl(R,I)
+    case ReflectionTransformType::MetaNamespaceDecl: {
+      const TagDecl* TD = BaseType->getAsTagDecl();
+      std::string TDN = TD->getNameAsString();
+      const DeclContext* DC = TD->getDeclContext();
+      if (TDN.find("__namespace_t") == std::string::npos ||
+          (!DC->isNamespace() && !DC->isTranslationUnit())) {
+        return QualType();
+      }
+      const Decl *D = GetNamespaceDeclAtIndexPos(*this, Loc, DC, IdxArgs[0]);
       if (!D)
         return QualType();
       
@@ -5843,9 +5875,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
         break;
       }
       break;
-                                                         }
-#endif
-
+    }
     default:
       llvm_unreachable("unknown reflection transform type");
     }

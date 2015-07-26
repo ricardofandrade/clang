@@ -471,6 +471,7 @@ KEYWORD(__record_friend_type        , KEYCXX)
 KEYWORD(__namespace_count           , KEYCXX)
 KEYWORD(__namespace_identifier      , KEYCXX)
 KEYWORD(__namespace_type            , KEYCXX)
+KEYWORD(__namespace_decl            , KEYCXX)
 // TODO
 KEYWORD(__annotate_str              , KEYCXX)
 

@@ -3373,7 +3373,8 @@ public:
     RecordMemberFieldType,
     RecordMethodType,
     RecordFriendType,
-    NamespaceType
+    MetaNamespaceType,
+    MetaNamespaceDecl
   };
 
 private:

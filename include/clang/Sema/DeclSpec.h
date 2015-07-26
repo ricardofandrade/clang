@@ -307,6 +307,7 @@ public:
   static const TST TST_RecordMemberFieldType = clang::TST_RecordMemberFieldType;
   static const TST TST_RecordFriendType = clang::TST_RecordFriendType;
   static const TST TST_meta_namespaceType = clang::TST_meta_namespaceType;
+  static const TST TST_meta_namespaceDecl = clang::TST_meta_namespaceDecl;
   static const TST TST_auto = clang::TST_auto;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
   static const TST TST_atomic = clang::TST_atomic;
@@ -416,7 +417,8 @@ private:
             T == TST_recordBaseType || 
             T == TST_recordDirectBaseType || T == TST_recordVirtualBaseType ||
             T == TST_RecordMemberFieldType || T == TST_RecordMemberFieldType ||
-            T == TST_RecordMethodType || T == TST_RecordFriendType || T == TST_meta_namespaceType);
+            T == TST_RecordMethodType || T == TST_RecordFriendType || 
+            T == TST_meta_namespaceType || T == TST_meta_namespaceDecl);
   }
   static bool isExprRep(TST T) {
     return (T == TST_typeofExpr || T == TST_decltype);
@@ -424,7 +426,8 @@ private:
   static bool isParameterizedRep(TST T) {
     return (T == TST_recordBaseType || T == TST_recordDirectBaseType || T == TST_recordVirtualBaseType ||
             T == TST_RecordMemberFieldType || T == TST_RecordMemberFieldType ||
-            T == TST_RecordMethodType || T == TST_RecordFriendType || T == TST_meta_namespaceType);
+            T == TST_RecordMethodType || T == TST_RecordFriendType || 
+            T == TST_meta_namespaceDecl);
   }
 
   DeclSpec(const DeclSpec &) LLVM_DELETED_FUNCTION;
@@ -433,7 +436,8 @@ public:
   static bool isDeclRep(TST T) {
     return (T == TST_enum || T == TST_struct ||
             T == TST_interface || T == TST_union ||
-            T == TST_class || T == TST_meta_namespaceType);
+            T == TST_class || 
+            T == TST_meta_namespaceType);
   }
 
   DeclSpec(AttributeFactory &attrFactory)

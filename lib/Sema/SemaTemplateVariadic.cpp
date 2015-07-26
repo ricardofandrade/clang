@@ -710,7 +710,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_RecordMemberFieldType:
   case TST_RecordMethodType:
   case TST_RecordFriendType:
-  case TST_meta_namespaceType:
+  case TST_meta_namespaceDecl:
       {
     // test parameter exprs also
     ArrayRef<Expr*> Args = DS.getParamExprs();
@@ -721,6 +721,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
     }
     // fall through!
                                   }
+  case TST_meta_namespaceType:
   case TST_typename:
   case TST_typeofType:
   case TST_underlyingType:
