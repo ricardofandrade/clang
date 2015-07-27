@@ -654,7 +654,7 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   ArrayRef<Expr*> Args,
   const PrintingPolicy &Policy) {
     assert(isTypeRep(T) && "T does not store a type");
-    assert(isParameterizedRep(T) && "T does not require arguments");
+    assert((isParameterizedRep(T) || Args.empty()) && "T does not require arguments");
     assert(Rep && "no type provided!");
     if (TypeSpecType != TST_unspecified) {
       PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);

@@ -522,7 +522,7 @@ public:
     return ExprRep;
   }
   ArrayRef<Expr*> getParamExprs() const {
-    assert (isParameterizedRep((TST) TypeSpecType) && "DeclSpec is not parameterized");
+    assert ((isParameterizedRep((TST) TypeSpecType) || ArgExprs.empty()) && "DeclSpec is not parameterized");
     return ArgExprs;
   }
   CXXScopeSpec &getTypeSpecScope() { return TypeScope; }
@@ -699,7 +699,7 @@ public:
     ExprRep = Rep;
   }
   void UpdateParamExprs(ArrayRef<Expr*> Args) {
-    assert(isParameterizedRep((TST) TypeSpecType));
+    assert((isParameterizedRep((TST) TypeSpecType) || Args.empty()) && "DeclSpec is not parameterized");
     ArgExprs.clear();
     for (ArrayRef<Expr*>::iterator I = Args.begin(), E = Args.end();
          I != E; ++I) {
