@@ -4871,6 +4871,10 @@ ExprResult Sema::BuildNamespaceTrait(ReflectionTypeTrait RTT,
         return ExprError();
       if (const NamedDecl *ND = dyn_cast<NamedDecl>(D) ) {
         Value = AllocateStringLiteral(Context, KWLoc, VType, ND->getNameAsString());
+      } else if (const LinkageSpecDecl *LSD = dyn_cast<LinkageSpecDecl>(D)) {
+        std::string language = LSD->getLanguage() == LinkageSpecDecl::lang_c
+            ? "extern \"C\"" : "extern \"C++\"";
+        Value = AllocateStringLiteral(Context, KWLoc, VType, language);
       } else {
         //this should never happens
         std::string str;

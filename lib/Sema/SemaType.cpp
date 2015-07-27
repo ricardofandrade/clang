@@ -5834,12 +5834,11 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
         if (const NamespaceDecl *ND = dyn_cast<NamespaceDecl>(D) ) {
           //nested namespace
           const NamespaceDecl *FirstND = ND->getOriginalNamespace();
-          std::string name = "__namespace_" + FirstND->getNameAsString() + "_t";
+          std::string name = "__" + FirstND->getNameAsString() + "__namespace_t";
           RecordDecl* NewDecl = RecordDecl::Create(
             Context, clang::TTK_Struct, const_cast<NamespaceDecl *>(FirstND),
             SourceLocation(), SourceLocation(), &Context.Idents.get(name));
           NewDecl->setImplicit();
-          //PushOnScopeChains(NewDecl, getCurScope());
           QualType QT = Context.getTagDeclType(NewDecl);
           Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
         } else 
@@ -5862,7 +5861,19 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
           ///other types
           QualType QT = Context.getTypeDeclType(TD);//QualType(TD->getTypeForDecl(),0);
           Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
-        } else {
+        } else
+        if (const LinkageSpecDecl *LSD = dyn_cast<LinkageSpecDecl>(D)) {
+          std::string language = LSD->getLanguage() == LinkageSpecDecl::lang_c
+            ? "extern_c" : "extern_cxx";
+          std::string name = "__" + language + "__namespace_t";
+          RecordDecl* NewDecl = RecordDecl::Create(
+            Context, clang::TTK_Struct, const_cast<LinkageSpecDecl*>(LSD),
+            SourceLocation(), SourceLocation(), &Context.Idents.get(name));
+          NewDecl->setImplicit();
+          QualType QT = Context.getTagDeclType(NewDecl);
+          Reflected = ApplyQualRefFromOther(*this, QT, BaseType);          
+        }
+        else {
           if (const NamedDecl *ND = dyn_cast<NamedDecl>(D) ) {
             llvm::errs() << " named > " << ND->getName() << " " << ND->getKind() << " < \n";
           } else {
