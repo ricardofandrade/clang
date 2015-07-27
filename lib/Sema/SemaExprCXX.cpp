@@ -3635,18 +3635,13 @@ ExprResult Sema::ActOnReflectionTypeTrait(ReflectionTypeTrait RTT,
   return BuildReflectionTypeTrait(RTT, KWLoc, TSInfo, IdxArgs, RParen);
 }
 
-#if 1
 ExprResult Sema::ActOnNamespaceTrait(ReflectionTypeTrait RTT,
                                      SourceLocation KWLoc,
                                      const NamespaceDecl *ND,
                                      ArrayRef<Expr*> IdxArgs,
                                      SourceLocation RParen) {
-  if (!ND)
-    return ExprError();
-
   return BuildNamespaceTrait(RTT, KWLoc, ND, IdxArgs, RParen);
 }
-#endif
 
 #if 0 //TODO  param name
 static const FunctionDecl *RequireFunctionType(Sema& S, SourceLocation KWLoc,
@@ -4297,7 +4292,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   // The result value -- is 0 if dependent???
   // COULD BE VERY PROBLEMATIC IN MANY CONTEXTS!!!
   // use placeholder/dummy exprs instead??
-  Expr *Value = NULL;
+  Expr *Value = nullptr;
 
   // the default for a unknown type is DependentTy
   QualType VType = Context.DependentTy;
@@ -4310,7 +4305,6 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   // try to initialize the expr type if possible
   switch (RTT) {
   case RTT_EnumeratorListSize:
-  case RTT_EnumValueDupCount:
   case RTT_RecordBaseCount:
   case RTT_RecordDirectBaseCount:
   case RTT_RecordVirtualBaseCount:
@@ -4322,7 +4316,6 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
     VType = Context.getSizeType();
     break;
 
-  case RTT_EnumHasGapsInValueRange:
   case RTT_TypeIsUnnamed:
   case RTT_RecordBaseIsVirtual:
   case RTT_RecordMemberFieldIsMutable:
@@ -4340,15 +4333,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
     VType = Context.IntTy; //? Context.LongLongTy
     break;
 
-  case RTT_EnumValueMonotonicity:
-  case RTT_EnumValuePopCount:
-    // has to be signed!
-    VType = Context.IntTy;
-    break;
-
   case RTT_EnumeratorValue:
-  case RTT_EnumMinimumValue:
-  case RTT_EnumMaximumValue:
     // is dependent on T (only): will be set during evaluation or
     // left as DependentTy
     // TODO: set here in case of known T and dependent IdxExpr?
@@ -4377,7 +4362,6 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   default:
     llvm_unreachable("Unknown type trait or not implemented");
   }
-
 
   // Evaluate if not dependent
   bool dependent = T->isDependentType();
@@ -4420,8 +4404,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       llvm::APSInt apval = Context.MakeIntValue(val, VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
-                             }
-
+    }
     ///__enumerator_value(Enum,I) -> size_t    //value of I'th enumerator in Enum
     case RTT_EnumeratorValue: {
       // Try to get the requested EnumConstantDecl
@@ -4434,159 +4417,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       Value = BuildDeclRefExpr(ECD, VType, VK_RValue, KWLoc).get();
       assert(Value && "BuildDeclRefExpr failed for EnumValue!");
       break;
-                              }
-
-#if 1  //deprecated 
-    case RTT_EnumMinimumValue:
-    case RTT_EnumMaximumValue: {
-      // T has to be a enum type
-      const EnumDecl *ED = RequireCompleteEnumType(*this, KWLoc, TSInfo);
-      if (!ED)
-        return ExprError();
-
-      // no enumerators: no min/max possible!
-      if (ED->enumerator_begin() == ED->enumerator_end()) {
-        Diag(KWLoc, diag::err_enum_has_no_enumerators)
-          << T << TSInfo->getTypeLoc().getSourceRange();
-        return ExprError();
-      }
-
-      // Find min/max:
-      EumConstantDeclValueCmp cmp;
-      EnumDecl::enumerator_iterator ResEl;
-      ResEl = (RTT == RTT_EnumMinimumValue) ?
-        std::min_element(ED->enumerator_begin(), ED->enumerator_end(), cmp) :
-        std::max_element(ED->enumerator_begin(), ED->enumerator_end(), cmp);
-      assert(ResEl != ED->enumerator_end() && "No EnumMin/MaxValue found?");
-
-      VType = Context.getEnumType(ED);
-      // Simulate a DeclRefExpr for the found element, referencing the enum constant
-      Value = BuildDeclRefExpr((*ResEl), VType, VK_RValue, KWLoc).get();
-      assert(Value && "BuildDeclRefExpr failed for EnumMin/MaxValue!");
-      break;
-                               }
-
-    case RTT_EnumValueDupCount: {
-      // T has to be a enum type
-      const EnumDecl *ED = RequireCompleteEnumType(*this, KWLoc, TSInfo);
-      if (!ED)
-        return ExprError();
-
-      // Count the duplicated values (by Set insertion)
-      uint64_t dups = 0;
-      llvm::SmallSet<llvm::APSInt, 8> UniqueVals;
-      for (EnumDecl::enumerator_iterator I = ED->enumerator_begin(),
-             E = ED->enumerator_end(); I != E; ++I)
-        dups += !UniqueVals.insert((*I)->getInitVal()).second;  // increment by 1 if no insert
-
-      llvm::APSInt apval = Context.MakeIntValue(dups, VType);
-      Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
-      break;
-                                }
-
-    case RTT_EnumHasGapsInValueRange: {
-      // T has to be a enum type
-      const EnumDecl *ED = RequireCompleteEnumType(*this, KWLoc, TSInfo);
-      if (!ED)
-        return ExprError();
-
-      // Are there any undefined values between Min/Max?
-      bool TestRes = false;   // if no/one enumerator(s) -> no
-
-      const size_t DeclCount = std::distance(ED->enumerator_begin(), ED->enumerator_end());
-      if (DeclCount > 1) {
-        // get sorted value range
-        llvm::SmallVector<llvm::APSInt, 8> SortedVals;
-        SortedVals.reserve(DeclCount);
-        for (EnumDecl::enumerator_iterator I = ED->enumerator_begin(),
-               E = ED->enumerator_end(); I != E; ++I)
-          SortedVals.push_back((*I)->getInitVal());
-        std::sort(SortedVals.begin(), SortedVals.end());
-
-        for (size_t I = 1; I < DeclCount; ++I) {
-          const llvm::APSInt& Cur = SortedVals[I];
-          llvm::APSInt Last(SortedVals[I-1]);
-          if (Cur != Last && Cur != ++Last) {
-            TestRes = true;  // more than 1 difference
-            break;
-          }
-        }
-      }
-
-      Value = new (Context) CXXBoolLiteralExpr(TestRes, VType, KWLoc);
-      break;
-                                      }
-
-    case RTT_EnumValueMonotonicity: {
-      // T has to be a enum type
-      const EnumDecl *ED = RequireCompleteEnumType(*this, KWLoc, TSInfo);
-      if (!ED)
-        return ExprError();
-
-      // Return -2/-1/0/+1/+2 for (strictly = *2) (decreasing = *-1) monotonicity
-      // 0 for non/any (for <= 1 enumerators)
-      int64_t Mon = 0;
-      const size_t DeclCount = std::distance(ED->enumerator_begin(), ED->enumerator_end());
-      if (DeclCount > 1) {
-        bool strictly = true;
-        int direction = 0;
-        EnumDecl::enumerator_iterator I = ED->enumerator_begin(), E = ED->enumerator_end();
-        llvm::APSInt Last((*I)->getInitVal());
-        for (++I; I != E; ++I) {
-          const llvm::APSInt& Cur = (*I)->getInitVal();
-          if (Cur == Last) {
-            strictly = false;
-          } else {
-            int ndirection = Cur > Last ? 1 : -1;
-            if (direction == 0)  // only at start
-              direction = ndirection;
-            else {
-              if (direction != ndirection) {
-                direction = 0;  // no monotonicity
-                break;
-              }
-            }
-          }
-          Last = Cur;
-        }
-        Mon = direction * (strictly ? 2 : 1);
-      }
-
-      // signed/unsigned okay?...
-      llvm::APSInt apval = Context.MakeIntValue(static_cast<uint64_t>(Mon), VType);
-      Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
-      break;
-                                    }
-
-    case RTT_EnumValuePopCount: {
-      // T has to be a enum type
-      const EnumDecl *ED = RequireCompleteEnumType(*this, KWLoc, TSInfo);
-      if (!ED)
-        return ExprError();
-
-      // does a popcount on every enumerator, and returns that value
-      // if it's the same for every one. Otherwise -1.
-      // Only useful to see if flag-style enum (with popcount==1)
-      int64_t Pop = -1;
-      if (ED->enumerator_begin() != ED->enumerator_end()) {
-        EnumDecl::enumerator_iterator I = ED->enumerator_begin(),
-          E = ED->enumerator_end();
-        Pop = (*I)->getInitVal().countPopulation();
-        for (++I; I != E; ++I) {
-          int64_t NPop = (*I)->getInitVal().countPopulation();
-          if (NPop != Pop) {
-            Pop = -1;
-            break;
-          }
-        }
-      }
-
-      llvm::APSInt apval = Context.MakeIntValue(static_cast<uint64_t>(Pop), VType);
-      Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
-      break;
-                                }
-#endif //deprecated 
-
+    }
     ///__record_base_count(R)     //total base count (all not virtual bases?)
     case RTT_RecordBaseCount: {
       // No complete definition required!
@@ -4602,8 +4433,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       //?llvm::APSInt apval = Context.MakeIntValue(RD->getNumBases(), VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
-                              }
-
+    }
     ///__record_direct_base_count(R)
     case RTT_RecordDirectBaseCount: {
       // No complete definition required!
@@ -4614,8 +4444,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       llvm::APSInt apval = Context.MakeIntValue(RD->getNumBases(), VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
-                              }
-
+    }
     ///__record_virtual_base_count(R)
     case RTT_RecordVirtualBaseCount: {
       // No complete definition required!
@@ -4626,8 +4455,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       llvm::APSInt apval = Context.MakeIntValue(RD->getNumVBases(), VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
-                                     }
-
+    }
     case RTT_RecordMemberFieldCount: {
       // Complete definition required!
       const CXXRecordDecl *RD = RequireRecordType(*this, KWLoc, TSInfo, true);
@@ -4639,8 +4467,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       llvm::APSInt apval = Context.MakeIntValue(val, VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
-                                     }
-
+    }
     case RTT_RecordBaseIsVirtual: {
       // Try to get the requested base specifier
       const CXXBaseSpecifier *BS = GetRecordBaseAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4650,8 +4477,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       // Does the current base specifier contain virtual?
       Value = new (Context) CXXBoolLiteralExpr(BS->isVirtual(), VType, KWLoc);
       break;
-                                        }
-
+    }
     ///__enumerator_identifier(Enum,I) -> string    //identifier of I'th enumerator in Enum
     case RTT_EnumeratorIdentifier: {
       // Try to get the requested EnumConstantDecl
@@ -4662,8 +4488,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       // Just take the Decl name
       Value = AllocateStringLiteral(Context, KWLoc, VType, ECD->getName());
       break;
-                             }
-
+    }
     /// __type_canonical_name
     case RTT_TypeCanonicalName: {
       PrintingPolicy PP(LangOpts);
@@ -4672,8 +4497,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       // ^-- also has the result that inline namespaces are not specified.. which should be okay
       Value = AllocateStringLiteral(Context, KWLoc, VType, T.getCanonicalType().getAsString(PP));
       break;
-                                }
-
+    }
     case RTT_TypeSugaredName: {
       // not really useful, besides maybe for macros..
       // TODO: remove decltype() is outermost?
@@ -4681,8 +4505,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       PP.SuppressUnwrittenScope = true;  // see above
       Value = AllocateStringLiteral(Context, KWLoc, VType, T.getAsString(PP));
       break;
-                              }
-
+    }
     case RTT_TypeIsUnnamed: {
       const Type *TP = T.getTypePtrOrNull();
       assert(TP && "__type_is_anonymous Type is null");
@@ -4690,8 +4513,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       // ??? Correct and/or useful??
       Value = new (Context) CXXBoolLiteralExpr(TP->hasUnnamedOrLocalType(), VType, KWLoc);
       break;
-                              }
-
+    }
     case RTT_RecordMemberFieldIdentifier: {
       // Try to get the requested member field
       const FieldDecl *FD = GetRecordMemberFieldAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4701,9 +4523,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       // Just take the Decl name
       Value = AllocateStringLiteral(Context, KWLoc, VType, FD->getName());
       break;
-                                     }
-
-
+    }
     case RTT_RecordMemberFieldPtr: {
       // Try to get the requested member field
       FieldDecl *FD = GetRecordMemberFieldAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4732,8 +4552,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       VType = Value->getType();    // get the member pointer type
 
       break;
-                                   }
-
+    }
     case RTT_ObjectMemberFieldRef: {
       // Try to get the requested member field
       FieldDecl *FD = GetRecordMemberFieldAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[1]);
@@ -4771,10 +4590,8 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
 
       VType = Value->getType();      // get the member pointer type
       VKind = Value->getValueKind(); // might be l- or r-value ref!
-
       break;
-                                   }
-
+    }
     case RTT_RecordBaseAccessSpec: {
       // Try to get the requested base specifier
       const CXXBaseSpecifier *BS = GetRecordBaseAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4784,8 +4601,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       // What access is allowed for this base specifier?
       Value = AllocateConvertedAccessSpecifier(Context, KWLoc, VType, BS->getAccessSpecifier());
       break;
-                                   }
-
+    }
     ///__record_member_field_info(T,I) -> size_t (meta_info_enum)
     case RTT_RecordMemberFieldInfo: {
       // Try to get the requested member field
@@ -4797,8 +4613,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       //Value = AllocateConvertedAccessSpecifier(Context, KWLoc, VType, FD->getAccess());
       Value = AllocateConvertedSpecifier(Context, KWLoc, VType, FD);
       break;
-                                          }
-
+    }
     ///__record_method_info(T,I) -> size_t (meta_info_enum)
     case RTT_RecordMethodInfo: {
       // Try to get the requested method
@@ -4808,8 +4623,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
 
       Value = AllocateConvertedSpecifier(Context, KWLoc, VType, MD);
       break;
-                                          }
-
+    }
     case RTT_RecordMemberFieldIsMutable: {
       // Try to get the requested member field
       FieldDecl *FD = GetRecordMemberFieldAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4818,7 +4632,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
 
       Value = new (Context) CXXBoolLiteralExpr(FD->isMutable(), VType, KWLoc);
       break;
-                                         }
+    }
     case RTT_RecordMemberFieldIsBitField: {
       // Try to get the requested member field
       FieldDecl *FD = GetRecordMemberFieldAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4827,7 +4641,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
 
       Value = new (Context) CXXBoolLiteralExpr(FD->isBitField(), VType, KWLoc);
       break;
-                                          }
+    }
     case RTT_RecordMemberFieldBitFieldSize: {
       // Try to get the requested member field
       FieldDecl *FD = GetRecordMemberFieldAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4838,7 +4652,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       llvm::APSInt apval = Context.MakeIntValue(val, VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
-                                            }
+    }
     case RTT_RecordMemberFieldIsAnonBitField: {
       // Try to get the requested member field
       FieldDecl *FD = GetRecordMemberFieldAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4856,8 +4670,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
 
       Value = new (Context) CXXBoolLiteralExpr(FD->getType()->getAs<ReferenceType>(), VType, KWLoc);
       break;
-                                              }
-
+    }
     ///__record_method_count(R)
     case RTT_RecordMethodCount: { 
       // Complete definition required!
@@ -4870,8 +4683,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       llvm::APSInt apval = Context.MakeIntValue(val, VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
-                                     }
-
+    }
     ///__record_method_identifier(R,I)
     case RTT_RecordMethodIdentifier: { 
       const CXXMethodDecl *MD = GetRecordMethodAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4884,11 +4696,9 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       //We use a human-readable name for the declaration for now.
       Value = AllocateStringLiteral(Context, KWLoc, VType, MD->getNameAsString());
       break;
-                             }
-
+    }
     ///__function_param_identifier(T,P)
     case RTT_FunctionParamIdentifier: {
-
       QualType T = TSInfo->getType().getCanonicalType().getNonReferenceType();
       if (const PointerType* p = T->getAs<PointerType>()) {
         T = p->getPointeeType();
@@ -4915,7 +4725,6 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       Value = AllocateStringLiteral(Context, KWLoc, VType, T.getCanonicalType().getAsString(PP));
       break;
     }
-
     ///__record_function_param_identifier(T,I,P)
     case RTT_RecordMethodParamIdentifier: { 
       // Complete definition required!
@@ -4930,9 +4739,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       
       Value = AllocateStringLiteral(Context, KWLoc, VType, PD->getName()); //default
       break;
-                                   }
-
-
+    }
     ///__record_friend_count(R)
     case RTT_RecordFriendCount: { 
       // Complete definition required!
@@ -4945,8 +4752,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       llvm::APSInt apval = Context.MakeIntValue(val, VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
-                                }
-
+    }
     ///__record_friend_identifier(R,I)
     case RTT_RecordFriendIdentifier: { 
       const FriendDecl *FD = GetRecordFriendAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4970,11 +4776,9 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
         llvm::errs() << " unknown friend identifier from __record_friend_identifier \n";
       }
       break;
-                                     }
-#if 1 //TODO >>>
+    }
     ///__record_annotate_str(T)  //__annotate_str
     case RTT_AnnotateStr: { 
-
         // Complete definition required!
       const CXXRecordDecl *RD = RequireRecordType(*this, KWLoc, TSInfo, true);
       if (!RD)
@@ -5008,11 +4812,8 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       } else {
         Value = AllocateStringLiteral(Context, KWLoc, VType, attribute_str);
       }
-      
       break;
-                          }
-#endif
-
+    }
     default:
       llvm_unreachable("Unknown type trait or not implemented");
     }  // switch
@@ -5036,39 +4837,36 @@ ExprResult Sema::BuildNamespaceTrait(ReflectionTypeTrait RTT,
                                      ArrayRef<Expr*> IdxArgs,
                                      SourceLocation RParen)
 {
-  Expr *Value = NULL;
-
+  Expr *Value = nullptr;
   QualType VType = Context.DependentTy;
   switch (RTT) {
     case RTT_Identifier:
-      Value = AllocateStringLiteral(Context, KWLoc, VType, ND->getName());
+      Value = AllocateStringLiteral(Context, KWLoc, VType, ND ? ND->getName() : "::");
       break;
-#if 1  //TODO >>>
     ///__namespace_count(R)
-    case RTT_NamespaceCount: { 
-      //const NamespaceDecl *FirstND = ND->getOriginalNamespace();
-      const NamespaceDecl *MostRecentND = ND->getMostRecentDecl();
-      if (!MostRecentND)
-        return ExprError();
-
+    case RTT_NamespaceCount: {
       uint64_t total_cnt = 0;
-      for (NamespaceDecl::redecl_iterator
-           I = ND->redecls_begin(), E = ND->redecls_end(); I != E; ++I) {
-        total_cnt += std::distance(I->decls_begin(), I->decls_end());
+      if (ND) { 
+        const NamespaceDecl *MostRecentND = ND->getMostRecentDecl();
+        if (!MostRecentND)
+          return ExprError();
+  
+        for (NamespaceDecl::redecl_iterator
+             I = ND->redecls_begin(), E = ND->redecls_end(); I != E; ++I) {
+          total_cnt += std::distance(I->decls_begin(), I->decls_end());
+        }
+      } else {
+        DeclContext* DC = Context.getTranslationUnitDecl();
+        total_cnt += std::distance(DC->decls_begin(), DC->decls_end());
       }
-      // Count how many types are in this(current) namespace
-      //uint64_t cur_cnt = std::distance(ND->decls_begin(), ND->decls_end());
-      //llvm::errs() << " __namespace_count  " << total_cnt << " " << cur_cnt << "  \n";
-
       VType = Context.getSizeType();
       llvm::APSInt apval = Context.MakeIntValue(total_cnt, VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
-                                }
-
+    }
     ///__namespace_identifier(N,I)
     case RTT_NamespaceIdentifier: { 
-      const Decl *D = GetNamespaceDeclAtIndexPos(*this, KWLoc, ND, IdxArgs[0]);     
+      const Decl *D = GetNamespaceDeclAtIndexPos(*this, KWLoc, ND ? cast<DeclContext>(ND) : Context.getTranslationUnitDecl(), IdxArgs[0]);     
       if(!D)
         return ExprError();
       if (const NamedDecl *ND = dyn_cast<NamedDecl>(D) ) {
@@ -5077,11 +4875,10 @@ ExprResult Sema::BuildNamespaceTrait(ReflectionTypeTrait RTT,
         //this should never happens
         std::string str;
         Value = AllocateStringLiteral(Context, KWLoc, VType, str);
-        llvm::errs() << " unknown friend identifier from __namespace_identifier \n";
+        llvm::errs() << " unknown namespace identifier from __namespace_identifier \n";
       }
       break;
-                                }
-#endif
+    }
     default:
       llvm_unreachable("Unknown type trait or not implemented");
   }  // switch

@@ -19,6 +19,7 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2856,13 +2857,6 @@ static ReflectionTypeTrait ReflectionTypeTraitFromTokKind(tok::TokenKind kind) {
   case tok::kw___enumerator_value:                 return RTT_EnumeratorValue;
   case tok::kw___enumerator_identifier:            return RTT_EnumeratorIdentifier;
 
-  case tok::kw___enum_minimum_value:               return RTT_EnumMinimumValue;
-  case tok::kw___enum_maximum_value:               return RTT_EnumMaximumValue;
-  case tok::kw___enum_value_dup_count:             return RTT_EnumValueDupCount;
-  case tok::kw___enum_has_gaps_in_value_range:     return RTT_EnumHasGapsInValueRange;
-  case tok::kw___enum_value_monotonicity:          return RTT_EnumValueMonotonicity;
-  case tok::kw___enum_value_pop_count:             return RTT_EnumValuePopCount;
-
   case tok::kw___type_canonical_name:              return RTT_TypeCanonicalName;
   case tok::kw___type_sugared_name:                return RTT_TypeSugaredName;
   case tok::kw___type_is_unnamed:                  return RTT_TypeIsUnnamed;
@@ -2924,6 +2918,11 @@ ExprResult Parser::ParseReflectionTypeTrait() {
     if (ParseOptionalCXXScopeSpecifier(SS, ParsedType(), /*EnteringContext=*/false)) {
       return ExprError();
     }
+    NestedNameSpecifier *NNS = SS.getScopeRep();
+    if (NNS && NNS->getKind() == NestedNameSpecifier::Global && RTT == RTT_Identifier && Tok.is(tok::r_paren)) {
+      Parens.consumeClose();
+      return Actions.ActOnNamespaceTrait(RTT, Loc, nullptr/*global ns*/, Args, Parens.getCloseLocation());        
+    }
 
     if (Tok.isNot(tok::identifier) || SS.isInvalid()) {
       return ExprError();
@@ -2962,8 +2961,8 @@ ExprResult Parser::ParseReflectionTypeTrait() {
       Parens.consumeClose();
       return Actions.ActOnReflectionExpr(RTT, Loc, ER,
         Args, Parens.getCloseLocation());
-    } break;
-
+      break;
+    }
     case Sema::NC_Type:
       PT = Classification.getType();
       if (RTT == RTT_Identifier) {
@@ -2993,13 +2992,6 @@ ExprResult Parser::ParseReflectionTypeTrait() {
 
   switch (RTT) {
   case RTT_EnumeratorListSize:
-
-  case RTT_EnumMinimumValue:
-  case RTT_EnumMaximumValue:
-  case RTT_EnumValueDupCount:
-  case RTT_EnumHasGapsInValueRange:
-  case RTT_EnumValueMonotonicity:
-  case RTT_EnumValuePopCount:
 
   case RTT_TypeCanonicalName:
   case RTT_TypeSugaredName:
@@ -3082,7 +3074,6 @@ ExprResult Parser::ParseReflectionTypeTrait() {
     Args, Parens.getCloseLocation());
 }
 
-#if 1
 /// ParseReflectionTrait - Parse ....
 ///
 ///       primary-expression:
@@ -3098,65 +3089,55 @@ ExprResult Parser::ParseNamespaceReflectionTrait() {
 
   SmallVector<Expr*, 2> Args;
 
-  const bool EnteringContext = false;
-
   CXXScopeSpec SS;
-  if (getLangOpts().CPlusPlus &&
-      ParseOptionalCXXScopeSpecifier(SS, ParsedType(), EnteringContext)) {
+  if (ParseOptionalCXXScopeSpecifier(SS, ParsedType(), /*EnteringContext=*/false)) {
+    Diag(Tok, diag::err_expected_namespace_name);
+    Parens.skipToEnd();
     return ExprError();
   }
 
-  if (Tok.isNot(tok::identifier) || SS.isInvalid()) {
-    return ExprError();
-  }
-
-  IdentifierInfo *Name = Tok.getIdentifierInfo();
-  SourceLocation NameLoc = Tok.getLocation();
-  ConsumeToken();
-
-  Token Next = NextToken();
-
-  // Look up and classify the identifier. We don't perform any typo-correction
-  // after a scope specifier, because in general we can't recover from typos
-  // there (eg, after correcting 'A::tempalte B<X>::C' [sic], we would need to
-  // jump back into scope specifier parsing).
-  Sema::NameClassification Classification = Actions.ClassifyName(
-          getCurScope(), SS, Name, NameLoc, Next, false /*IsAddressOfOperand*/,
-          nullptr /*CCC*/, true);
-
-  switch (Classification.getKind()) {
-  case Sema::NC_NestedNameSpecifier:
-    if(RTT == RTT_NamespaceIdentifier) {
-      // Parse comma and then expression
-      if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
-        Parens.skipToEnd();
-        return ExprError();
-      }
-  
-      ExprResult IdxExpr = ParseAssignmentExpression();
-      if (IdxExpr.isInvalid()) {
-        Parens.skipToEnd();
-        return ExprError();
-      }
-      Args.push_back(IdxExpr.get());
-    } else if (RTT != RTT_NamespaceCount) {
+  const NamespaceDecl* ND = nullptr;
+  NestedNameSpecifier *NNS = SS.getScopeRep();
+  if (!NNS || NNS->getKind() != NestedNameSpecifier::Global) {
+    // Parse namespace-name.
+    if (SS.isInvalid() || Tok.isNot(tok::identifier)) {
+      Diag(Tok, diag::err_expected_namespace_name);
+      Parens.skipToEnd();
       return ExprError();
-    } break;
-  case Sema::NC_Expression:
-  case Sema::NC_Type:
-  case Sema::NC_Unknown:
-  case Sema::NC_Error:
-  case Sema::NC_Keyword:    
-  case Sema::NC_TypeTemplate:
-  case Sema::NC_VarTemplate:
-  case Sema::NC_FunctionTemplate:
+    }
+    
+    IdentifierInfo *Name = Tok.getIdentifierInfo();
+    SourceLocation NameLoc = Tok.getLocation();
+    ConsumeToken();
+  
+    LookupResult R(Actions, Name, NameLoc, Sema::LookupNamespaceName);
+    if (!Actions.LookupParsedName(R, getCurScope(), &SS) || !R.isSingleResult() || !(ND = R.getAsSingle<NamespaceDecl>())) {
+      Diag(Tok, diag::err_expected_namespace_name);
+      Parens.skipToEnd();
+      return ExprError();
+    }
+  }
+      
+  if(RTT == RTT_NamespaceIdentifier) {
+    // Parse comma and then expression
+    if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
+      Parens.skipToEnd();
+      return ExprError();
+    }
+
+    ExprResult IdxExpr = ParseAssignmentExpression();
+    if (IdxExpr.isInvalid()) {
+      Parens.skipToEnd();
+      return ExprError();
+    }
+    Args.push_back(IdxExpr.get());
+  } else if (RTT != RTT_NamespaceCount) {
+    Parens.skipToEnd();
     return ExprError();
   }
-    
   Parens.consumeClose();
-  return Actions.ActOnNamespaceTrait(RTT, Loc, Classification.getNamespaceDecl(), Args, Parens.getCloseLocation());
+  return Actions.ActOnNamespaceTrait(RTT, Loc, ND, Args, Parens.getCloseLocation());
 }
-#endif
 
 /// \brief Parse the built-in type-trait pseudo-functions that allow 
 /// implementation of the TR1/C++11 type traits templates.

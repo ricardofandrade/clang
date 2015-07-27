@@ -419,13 +419,6 @@ KEYWORD(__enumerator_list_size           , KEYCXX)
 KEYWORD(__enumerator_value               , KEYCXX)
 KEYWORD(__enumerator_identifier          , KEYCXX)
 
-KEYWORD(__enum_minimum_value             , KEYCXX)
-KEYWORD(__enum_maximum_value             , KEYCXX)
-KEYWORD(__enum_value_dup_count           , KEYCXX)
-KEYWORD(__enum_has_gaps_in_value_range   , KEYCXX)
-KEYWORD(__enum_value_monotonicity        , KEYCXX)
-KEYWORD(__enum_value_pop_count           , KEYCXX)
-
 KEYWORD(__type_canonical_name            , KEYCXX)
 KEYWORD(__type_sugared_name              , KEYCXX)
 KEYWORD(__type_is_unnamed                , KEYCXX)

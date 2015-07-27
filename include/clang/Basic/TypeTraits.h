@@ -102,13 +102,6 @@ namespace clang {
     RTT_EnumeratorValue,
     RTT_EnumeratorIdentifier,
 
-    RTT_EnumMinimumValue,
-    RTT_EnumMaximumValue,
-    RTT_EnumValueDupCount,
-    RTT_EnumHasGapsInValueRange,
-    RTT_EnumValueMonotonicity,
-    RTT_EnumValuePopCount,
-
     RTT_TypeCanonicalName,
     RTT_TypeSugaredName,
     RTT_TypeIsUnnamed,

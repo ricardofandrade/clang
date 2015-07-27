@@ -1965,13 +1965,6 @@ static const char *getTypeTraitName(ReflectionTypeTrait RTT) {
   case RTT_EnumeratorValue:        return "__enumerator_value";
   case RTT_EnumeratorIdentifier:   return "__enumerator_identifier";
 
-  case RTT_EnumMinimumValue:       return "__enum_minimum_value";
-  case RTT_EnumMaximumValue:       return "__enum_maximum_value";
-  case RTT_EnumValueDupCount:      return "__enum_value_dup_count";
-  case RTT_EnumHasGapsInValueRange:return "__enum_has_gaps_in_value_range";
-  case RTT_EnumValueMonotonicity:  return "__enum_value_monotonicity";
-  case RTT_EnumValuePopCount:      return "__enum_value_pop_count";
-
   case RTT_TypeCanonicalName:      return "__type_canonical_name";
   case RTT_TypeSugaredName:        return "__type_sugared_name";
   case RTT_TypeIsUnnamed:          return "__type_is_unnamed";

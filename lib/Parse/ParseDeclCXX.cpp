@@ -928,7 +928,7 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
   SourceLocation StartLoc = ConsumeToken();
   BalancedDelimiterTracker Parens(*this, tok::l_paren);
   if (Parens.expectAndConsume(diag::err_expected_lparen_after)) {
-      return;
+    return;
   }
   
   TypeResult Ty = ParsedType::make(Actions.getVoidType());
@@ -937,10 +937,14 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
   if (TagType == DeclSpec::TST_meta_namespaceType) {
     CXXScopeSpec SS;
     // Parse (optional) nested-name-specifier.
-    ParseOptionalCXXScopeSpecifier(SS, ParsedType(), /*EnteringContext=*/false);
+    if (ParseOptionalCXXScopeSpecifier(SS, ParsedType(), /*EnteringContext=*/false)) {
+      Diag(Tok, diag::err_expected_namespace_name);
+      Parens.skipToEnd();
+      return;
+    }
   
     NestedNameSpecifier *NNS = SS.getScopeRep();
-    if (NNS->getKind() == NestedNameSpecifier::Global) {
+    if (NNS && NNS->getKind() == NestedNameSpecifier::Global) {
       DS.getTypeSpecScope() = SS;
     } else { 
       IdentifierInfo *NamespcName = nullptr;
@@ -974,10 +978,6 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
       return;
     }    
 
-    // TST_recordBaseType
-    // TST_recordVirtualBaseType
-    // both require one index parameter
-  
     // Parse comma and then expression
     if (ExpectAndConsume(tok::comma, diag::err_expected_comma)) {
       Parens.skipToEnd();
@@ -996,7 +996,7 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
   if (Parens.getCloseLocation().isInvalid())
     return;
 
-  const char *PrevSpec = 0;
+  const char *PrevSpec = nullptr;
   unsigned DiagID;
   if (DS.SetTypeSpecType(TagType, StartLoc, StartLoc, PrevSpec,
                          DiagID, Ty.get(), Args,

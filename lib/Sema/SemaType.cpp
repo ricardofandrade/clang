@@ -5784,7 +5784,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
         std::string name;
         const DeclContext* DC = nullptr;
         if (ND) {
-          const NamespaceDecl *FirstND = ND->getOriginalNamespace();
+          const NamespaceDecl *FirstND = ND->getMostRecentDecl();
           name = FirstND->isAnonymousNamespace()
             ? "__anonymous__namespace_t"
             : "__" + FirstND->getNameAsString() + "__namespace_t";
@@ -5797,7 +5797,6 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
           Context, clang::TTK_Struct, const_cast<DeclContext*>(DC),
           SourceLocation(), SourceLocation(), &Context.Idents.get(name));
         NewDecl->setImplicit();
-        //PushOnScopeChains(NewDecl, getCurScope());
         QualType QT = Context.getTagDeclType(NewDecl);
         Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
       }
@@ -5825,7 +5824,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
         if (const TagDecl *TD = dyn_cast<TagDecl>(D) ) { 
           ///(struct/union/class/enum)
           std::string TDN = TD->getNameAsString();
-          if (TDN.find("__namespace_") == 0 && TDN.find("_t") != 0) {
+          if (TDN.find("__namespace_t") != std::string::npos) {
             D = cast<NamespaceDecl>(TD->getDeclContext());
             continue;
           }
