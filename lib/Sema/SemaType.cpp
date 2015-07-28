@@ -5691,8 +5691,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
 
       Reflected = ApplyQualRefFromOther(*this, BS->getType(), BaseType);
       break;
-                                                  }
-
+    }
     ///  __record_direct_base_type(R,I)
     case ReflectionTransformType::RecordDirectBaseType: {
       const CXXBaseSpecifier *BS = GetRecordDirectBaseAtIndexPos(*this, Loc, TSInfo, IdxArgs[0]);
@@ -5701,9 +5700,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
 
       Reflected = ApplyQualRefFromOther(*this, BS->getType(), BaseType);
       break;
-                                                  }
-
-
+    }
     ///  __record_virtual_base_type(R,I)
     case ReflectionTransformType::RecordVirtualBaseType: {
       const CXXBaseSpecifier *BS = GetRecordVBaseAtIndexPos(*this, Loc, TSInfo, IdxArgs[0]);
@@ -5712,8 +5709,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
 
       Reflected = ApplyQualRefFromOther(*this, BS->getType(), BaseType);
       break;
-                                                  }
-
+    }
     ///  __record_member_field_type(R,I)
     case ReflectionTransformType::RecordMemberFieldType: {
       FieldDecl *FD = GetRecordMemberFieldAtIndexPos(*this, Loc, TSInfo, IdxArgs[0]);
@@ -5722,9 +5718,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
 
       Reflected = ApplyQualRefFromOther(*this, FD->getType(), BaseType);
       break;
-                                                         }
-
-
+    }
     ///  __record_method_type(R,I)
     case ReflectionTransformType::RecordMethodType: { 
       const CXXMethodDecl *MD = GetRecordMethodAtIndexPos(*this, Loc, TSInfo, IdxArgs[0]);
@@ -5751,8 +5745,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
       QualType QT(Proto,0);
       Reflected = ApplyQualRefFromOther(*this, QT, BaseType);*/
       break;
-                                                         }
-
+    }
     ///  __record_friend_type(R,I)
     case ReflectionTransformType::RecordFriendType: { 
       const FriendDecl *FD = GetRecordFriendAtIndexPos(*this, Loc, TSInfo, IdxArgs[0]);
@@ -5778,29 +5771,29 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
         return QualType();
       }
       break;
-                                                         }
+    }
     ///  __namespace_type(R)
     case ReflectionTransformType::MetaNamespaceType: {
-        std::string name;
-        const DeclContext* DC = nullptr;
-        if (ND) {
-          const NamespaceDecl *FirstND = ND->getMostRecentDecl();
-          name = FirstND->isAnonymousNamespace()
-            ? "__anonymous__namespace_t"
-            : "__" + FirstND->getNameAsString() + "__namespace_t";
-          DC = const_cast<NamespaceDecl *>(FirstND);
-        } else {
-          name = "__global__namespace_t";
-          DC = Context.getTranslationUnitDecl();
-        }
-        RecordDecl* NewDecl = RecordDecl::Create(
-          Context, clang::TTK_Struct, const_cast<DeclContext*>(DC),
-          SourceLocation(), SourceLocation(), &Context.Idents.get(name));
-        NewDecl->setImplicit();
-        QualType QT = Context.getTagDeclType(NewDecl);
-        Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
+      std::string name;
+      const DeclContext* DC = nullptr;
+      if (ND) {
+        const NamespaceDecl *FirstND = ND->getMostRecentDecl();
+        name = FirstND->isAnonymousNamespace()
+          ? "__anonymous__namespace_t"
+          : "__" + FirstND->getNameAsString() + "__namespace_t";
+        DC = const_cast<NamespaceDecl *>(FirstND);
+      } else {
+        name = "__global__namespace_t";
+        DC = Context.getTranslationUnitDecl();
       }
+      RecordDecl* NewDecl = RecordDecl::Create(
+        Context, clang::TTK_Struct, const_cast<DeclContext*>(DC),
+        SourceLocation(), SourceLocation(), &Context.Idents.get(name));
+      NewDecl->setImplicit();
+      QualType QT = Context.getTagDeclType(NewDecl);
+      Reflected = ApplyQualRefFromOther(*this, QT, BaseType);
       break;
+    }
     ///  __namespace_decl(R,I)
     case ReflectionTransformType::MetaNamespaceDecl: {
       const TagDecl* TD = BaseType->getAsTagDecl();

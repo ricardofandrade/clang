@@ -4661,7 +4661,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
 
       Value = new (Context) CXXBoolLiteralExpr(FD->isUnnamedBitfield(), VType, KWLoc);
       break;
-                                              }
+    }
     case RTT_RecordMemberFieldIsReference: {
       // Try to get the requested member field
       FieldDecl *FD = GetRecordMemberFieldAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
