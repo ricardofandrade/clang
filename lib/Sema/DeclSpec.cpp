@@ -313,6 +313,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_recordDirectBaseType:
     case TST_recordVirtualBaseType:
     case TST_RecordMemberFieldType:
+    case TST_RecordMemberVarType:
     case TST_RecordMethodType:
     case TST_RecordFriendType:
     case TST_meta_namespaceType:
@@ -485,6 +486,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_recordDirectBaseType: return "__record_direct_base_type";
   case DeclSpec::TST_recordVirtualBaseType: return "__record_virtual_base_type";
   case DeclSpec::TST_RecordMemberFieldType: return "__record_member_field_type";
+  case DeclSpec::TST_RecordMemberVarType: return "__record_member_var_type";
   case DeclSpec::TST_RecordMethodType: return "__record_method_type";
   case DeclSpec::TST_RecordFriendType: return "__record_friend_type";
   case DeclSpec::TST_meta_namespaceType: return "__namespace_type";

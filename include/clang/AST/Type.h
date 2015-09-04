@@ -3371,6 +3371,7 @@ public:
     RecordDirectBaseType,
     RecordVirtualBaseType,
     RecordMemberFieldType,
+    RecordMemberVarType,
     RecordMethodType,
     RecordFriendType,
     MetaNamespaceType,

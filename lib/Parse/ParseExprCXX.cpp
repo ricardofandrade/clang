@@ -2867,6 +2867,13 @@ static ReflectionTypeTrait ReflectionTypeTraitFromTokKind(tok::TokenKind kind) {
   case tok::kw___record_direct_base_count:         return RTT_RecordDirectBaseCount;
   case tok::kw___record_virtual_base_count:        return RTT_RecordVirtualBaseCount;
 
+  case tok::kw___record_member_var_count:          return RTT_RecordMemberVarCount;
+  case tok::kw___record_member_var_ptr:            return RTT_RecordMemberVarPtr;
+  case tok::kw___record_member_var_ref:            return RTT_RecordMemberVarRef;
+  case tok::kw___record_member_var_identifier:     return RTT_RecordMemberVarIdentifier;
+  case tok::kw___record_member_var_info:           return RTT_RecordMemberVarInfo;
+  case tok::kw___record_member_var_is_reference:   return RTT_RecordMemberVarIsReference;
+  
   case tok::kw___record_member_field_count:        return RTT_RecordMemberFieldCount;
   case tok::kw___record_member_field_ptr:          return RTT_RecordMemberFieldPtr;
   case tok::kw___object_member_field_ref:          return RTT_ObjectMemberFieldRef;
@@ -3000,6 +3007,8 @@ ExprResult Parser::ParseReflectionTypeTrait() {
   case RTT_RecordBaseCount:
   case RTT_RecordDirectBaseCount:
   case RTT_RecordVirtualBaseCount:
+
+  case RTT_RecordMemberVarCount:
   case RTT_RecordMemberFieldCount:
 
   case RTT_RecordMethodCount:
@@ -3035,6 +3044,12 @@ ExprResult Parser::ParseReflectionTypeTrait() {
 
   case RTT_RecordBaseAccessSpec:
   case RTT_RecordBaseIsVirtual:
+
+  case RTT_RecordMemberVarPtr:
+  case RTT_RecordMemberVarRef:
+  case RTT_RecordMemberVarIdentifier:
+  case RTT_RecordMemberVarInfo:
+  case RTT_RecordMemberVarIsReference:
 
   case RTT_RecordMemberFieldPtr:
   case RTT_RecordMemberFieldInfo:

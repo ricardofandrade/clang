@@ -305,6 +305,7 @@ public:
   static const TST TST_recordVirtualBaseType = clang::TST_recordVirtualBaseType;
   static const TST TST_RecordMethodType = clang::TST_RecordMethodType;
   static const TST TST_RecordMemberFieldType = clang::TST_RecordMemberFieldType;
+  static const TST TST_RecordMemberVarType = clang::TST_RecordMemberVarType;
   static const TST TST_RecordFriendType = clang::TST_RecordFriendType;
   static const TST TST_meta_namespaceType = clang::TST_meta_namespaceType;
   static const TST TST_meta_namespaceDecl = clang::TST_meta_namespaceDecl;
@@ -416,7 +417,7 @@ private:
             T == TST_underlyingType || T == TST_atomic ||
             T == TST_recordBaseType || 
             T == TST_recordDirectBaseType || T == TST_recordVirtualBaseType ||
-            T == TST_RecordMemberFieldType || T == TST_RecordMemberFieldType ||
+            T == TST_RecordMemberFieldType || T == TST_RecordMemberVarType ||
             T == TST_RecordMethodType || T == TST_RecordFriendType || 
             T == TST_meta_namespaceType || T == TST_meta_namespaceDecl);
   }
@@ -424,8 +425,9 @@ private:
     return (T == TST_typeofExpr || T == TST_decltype);
   }
   static bool isParameterizedRep(TST T) {
-    return (T == TST_recordBaseType || T == TST_recordDirectBaseType || T == TST_recordVirtualBaseType ||
-            T == TST_RecordMemberFieldType || T == TST_RecordMemberFieldType ||
+    return (T == TST_recordBaseType || T == TST_recordDirectBaseType || 
+            T == TST_recordVirtualBaseType ||
+            T == TST_RecordMemberFieldType || T == TST_RecordMemberVarType ||
             T == TST_RecordMethodType || T == TST_RecordFriendType || 
             T == TST_meta_namespaceDecl);
   }

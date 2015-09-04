@@ -1247,6 +1247,13 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   case tok::kw___record_direct_base_count:
   case tok::kw___record_virtual_base_count:
 
+  case tok::kw___record_member_var_count:
+  case tok::kw___record_member_var_ptr:
+  case tok::kw___record_member_var_ref:
+  case tok::kw___record_member_var_identifier:
+  case tok::kw___record_member_var_info:
+  case tok::kw___record_member_var_is_reference:
+  
   case tok::kw___record_member_field_count:
   case tok::kw___record_member_field_ptr:
   case tok::kw___object_member_field_ref:

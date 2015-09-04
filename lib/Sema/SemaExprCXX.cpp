@@ -3960,6 +3960,28 @@ FieldDecl *clang::GetRecordMemberFieldAtIndexPos(Sema& S, SourceLocation KWLoc,
   return *It;
 }
 
+VarDecl *clang::GetRecordMemberVarAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr)
+{
+  // T has to be a record type (not complete)
+  const CXXRecordDecl *RD = RequireRecordType(S, KWLoc, TSInfo, false);
+  if (!RD)
+    return 0;
+
+  // Evaluate the index expression, error on Idx < 0
+  typedef CXXRecordDecl::specific_decl_iterator<VarDecl> var_iterator;
+  size_t MaxIdx = std::distance(var_iterator(RD->decls_begin()), var_iterator(RD->decls_end()));
+  int Idx = RequireValidFieldIndex(S, KWLoc, TSInfo, IdxExpr, MaxIdx);
+  if (Idx < 0)
+    return 0;
+
+  // Get the requested field decl
+  var_iterator It = var_iterator(RD->decls_begin());
+  std::advance(It, Idx);
+
+  return *It;
+}
+
 #if 1  //todo >>
 
 static int RequireValidIndex(Sema& S, SourceLocation KWLoc, Expr *IdxExpr, size_t MaxIdx, unsigned DiagID)
@@ -4308,6 +4330,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   case RTT_RecordBaseCount:
   case RTT_RecordDirectBaseCount:
   case RTT_RecordVirtualBaseCount:
+  case RTT_RecordMemberVarCount:  
   case RTT_RecordMemberFieldCount:
   case RTT_RecordMemberFieldBitFieldSize:
   case RTT_RecordMethodCount:
@@ -4322,12 +4345,14 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   case RTT_RecordMemberFieldIsBitField:
   case RTT_RecordMemberFieldIsAnonBitField:
   case RTT_RecordMemberFieldIsReference:
+  case RTT_RecordMemberVarIsReference:
     // boolean type
     VType = Context.BoolTy;
     break;
 
   case RTT_RecordBaseAccessSpec:
   case RTT_RecordMemberFieldInfo:
+  case RTT_RecordMemberVarInfo:  
   case RTT_RecordMethodInfo:
     // ... size_t .. or ??
     VType = Context.IntTy; //? Context.LongLongTy
@@ -4341,10 +4366,13 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
 
   case RTT_RecordMemberFieldPtr:
   case RTT_ObjectMemberFieldRef:
+  case RTT_RecordMemberVarPtr:
+  case RTT_RecordMemberVarRef:
     // Exact type is dependent on everything, just forward...
     break;
 
   case RTT_FunctionParamIdentifier:
+  case RTT_RecordMemberVarIdentifier:  
 
   case RTT_EnumeratorIdentifier:
   case RTT_TypeCanonicalName:
@@ -4456,18 +4484,6 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
     }
-    case RTT_RecordMemberFieldCount: {
-      // Complete definition required!
-      const CXXRecordDecl *RD = RequireRecordType(*this, KWLoc, TSInfo, true);
-      if (!RD)
-        return ExprError();
-
-      // Count the range
-      uint64_t val = std::distance(RD->field_begin(), RD->field_end());
-      llvm::APSInt apval = Context.MakeIntValue(val, VType);
-      Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
-      break;
-    }
     case RTT_RecordBaseIsVirtual: {
       // Try to get the requested base specifier
       const CXXBaseSpecifier *BS = GetRecordBaseAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -4476,6 +4492,16 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
 
       // Does the current base specifier contain virtual?
       Value = new (Context) CXXBoolLiteralExpr(BS->isVirtual(), VType, KWLoc);
+      break;
+    }
+    case RTT_RecordBaseAccessSpec: {
+      // Try to get the requested base specifier
+      const CXXBaseSpecifier *BS = GetRecordBaseAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!BS)
+        return ExprError();
+
+      // What access is allowed for this base specifier?
+      Value = AllocateConvertedAccessSpecifier(Context, KWLoc, VType, BS->getAccessSpecifier());
       break;
     }
     ///__enumerator_identifier(Enum,I) -> string    //identifier of I'th enumerator in Enum
@@ -4512,6 +4538,115 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
 
       // ??? Correct and/or useful??
       Value = new (Context) CXXBoolLiteralExpr(TP->hasUnnamedOrLocalType(), VType, KWLoc);
+      break;
+    }
+    case RTT_RecordMemberVarCount: {
+      // Complete definition required!
+      const CXXRecordDecl *RD = RequireRecordType(*this, KWLoc, TSInfo, true);
+      if (!RD)
+        return ExprError();
+
+      // Count the range
+      typedef CXXRecordDecl::specific_decl_iterator<VarDecl> var_iterator;
+      uint64_t val = std::distance(var_iterator(RD->decls_begin()), var_iterator(RD->decls_end()));
+      llvm::APSInt apval = Context.MakeIntValue(val, VType);
+      Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
+      break;
+    }
+    case RTT_RecordMemberVarIdentifier: {
+      // Try to get the requested member field
+      const VarDecl *VD = GetRecordMemberVarAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!VD)
+        return ExprError();
+
+      // Just take the Decl name
+      Value = AllocateStringLiteral(Context, KWLoc, VType, VD->getName());
+      break;
+    }
+    case RTT_RecordMemberVarPtr: {
+      // Try to get the requested member field
+      VarDecl *VD = GetRecordMemberVarAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!VD)
+        return ExprError();
+
+      // Disallow e.g. bit-field address taking
+      //CheckAddressOfOperand
+      QualType ClassType = Context.getTypeDeclType(dyn_cast<CXXRecordDecl>(VD->getDeclContext()));
+      NestedNameSpecifier *Qualifier
+        = NestedNameSpecifier::Create(Context, 0, false,
+        ClassType.getTypePtr());
+      CXXScopeSpec SS;
+      SS.MakeTrivial(Context, Qualifier, KWLoc);
+
+      // see BuildDeclarationNameExpr
+      VType = VD->getType().getNonReferenceType();
+      // Simulate a DeclRefExpr at the current location, referencing the field
+      ExprResult VDRE = BuildDeclRefExpr(VD, VType, VK_LValue, KWLoc, &SS);
+      assert(VDRE.isUsable() && "BuildDeclRefExpr failed for Field!");
+
+      Value = CreateBuiltinUnaryOp(KWLoc, UO_AddrOf, VDRE.get()).get();
+      if (!Value)
+        return ExprError();
+      VType = Value->getType();    // get the member pointer type
+
+      break;
+    }
+    case RTT_RecordMemberVarRef: {
+      // Try to get the requested member field
+      VarDecl *VD = GetRecordMemberVarAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!VD)
+        return ExprError();
+
+      QualType ClassType = Context.getTypeDeclType(dyn_cast<CXXRecordDecl>(VD->getDeclContext()));
+      NestedNameSpecifier *Qualifier
+        = NestedNameSpecifier::Create(Context, 0, false,
+        ClassType.getTypePtr());
+      CXXScopeSpec SS;
+      SS.MakeTrivial(Context, Qualifier, KWLoc);
+
+      // Simulate a DeclRefExpr at the current location, referencing the enum constant
+      ExprResult VDRE = BuildDeclRefExpr(VD, VD->getType().getNonReferenceType(),
+        VK_LValue, KWLoc, &SS);
+            
+      Value = VDRE.get();
+      if (!Value)
+        return ExprError();
+
+      VType = Value->getType();      // get the member pointer type
+      VKind = Value->getValueKind(); // might be l- or r-value ref!
+      break;
+    }
+    ///__record_member_var_info(T,I) -> size_t (meta_info_enum)
+    case RTT_RecordMemberVarInfo: {
+      // Try to get the requested member field
+      VarDecl *VD = GetRecordMemberVarAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!VD)
+        return ExprError();
+
+      // What access is specified for this var?
+      //Value = AllocateConvertedAccessSpecifier(Context, KWLoc, VType, FD->getAccess());
+      Value = AllocateConvertedSpecifier(Context, KWLoc, VType, VD);
+      break;
+    }
+    case RTT_RecordMemberVarIsReference: {
+      // Try to get the requested member field
+      VarDecl *VD = GetRecordMemberVarAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!VD)
+        return ExprError();
+
+      Value = new (Context) CXXBoolLiteralExpr(VD->getType()->getAs<ReferenceType>(), VType, KWLoc);
+      break;
+    }
+    case RTT_RecordMemberFieldCount: {
+      // Complete definition required!
+      const CXXRecordDecl *RD = RequireRecordType(*this, KWLoc, TSInfo, true);
+      if (!RD)
+        return ExprError();
+
+      // Count the range
+      uint64_t val = std::distance(RD->field_begin(), RD->field_end());
+      llvm::APSInt apval = Context.MakeIntValue(val, VType);
+      Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
       break;
     }
     case RTT_RecordMemberFieldIdentifier: {
@@ -4590,16 +4725,6 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
 
       VType = Value->getType();      // get the member pointer type
       VKind = Value->getValueKind(); // might be l- or r-value ref!
-      break;
-    }
-    case RTT_RecordBaseAccessSpec: {
-      // Try to get the requested base specifier
-      const CXXBaseSpecifier *BS = GetRecordBaseAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
-      if (!BS)
-        return ExprError();
-
-      // What access is allowed for this base specifier?
-      Value = AllocateConvertedAccessSpecifier(Context, KWLoc, VType, BS->getAccessSpecifier());
       break;
     }
     ///__record_member_field_info(T,I) -> size_t (meta_info_enum)

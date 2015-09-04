@@ -432,41 +432,64 @@ KEYWORD(__record_direct_base_type        , KEYCXX)
 KEYWORD(__record_virtual_base_count      , KEYCXX)
 KEYWORD(__record_virtual_base_type       , KEYCXX)
 
-//KEYWORD(__record_type_is_thin            , KEYCXX)
-//KEYWORD(__record_type_has_straight_mbr_order   , KEYCXX)
-
 KEYWORD(__record_member_field_count      , KEYCXX)
 KEYWORD(__record_member_field_ptr        , KEYCXX)
 KEYWORD(__object_member_field_ref        , KEYCXX)
 KEYWORD(__record_member_field_identifier , KEYCXX)
 KEYWORD(__record_member_field_info       , KEYCXX)
 KEYWORD(__record_member_field_is_mutable , KEYCXX)
+KEYWORD(__record_member_field_is_reference     , KEYCXX)
 KEYWORD(__record_member_field_is_bit_field     , KEYCXX)
 KEYWORD(__record_member_field_bit_field_size   , KEYCXX)
 KEYWORD(__record_member_field_is_anon_bit_field, KEYCXX)
-KEYWORD(__record_member_field_is_reference     , KEYCXX)
+KEYWORD(__record_member_field_type  , KEYCXX)
 
-KEYWORD(__identifier  , KEYCXX)
+// TODO static vars - takes reflected namespaces?
+KEYWORD(__record_member_var_count       , KEYCXX)
+KEYWORD(__record_member_var_ptr         , KEYCXX)
+KEYWORD(__record_member_var_ref         , KEYCXX)
+KEYWORD(__record_member_var_identifier  , KEYCXX)
+KEYWORD(__record_member_var_info        , KEYCXX)
+KEYWORD(__record_member_var_is_reference, KEYCXX)
+KEYWORD(__record_member_var_type        , KEYCXX)
+
+// TODO - sub types - takes reflected namespaces? 
+KEYWORD(__record_member_type      , KEYCXX) //TODO
+KEYWORD(__record_member_type_info , KEYCXX) //TODO
+KEYWORD(__record_member_type_count, KEYCXX) //TODO
+
+KEYWORD(__local_identifier  , KEYCXX) // TODO - only var names
+
+KEYWORD(__identifier  , KEYCXX) // TODO - deprecate?
 KEYWORD(__function_param_identifier  , KEYCXX)
 
-// member function traits
+// TODO static function traits - takes reflected namespaces? operators, conversions?
+// Not needed?
+//KEYWORD(__record_function_count       , KEYCXX)
+//KEYWORD(__record_function_identifier  , KEYCXX)
+//KEYWORD(__record_function_type        , KEYCXX)
+
+// member function traits - operators, conversions?
 KEYWORD(__record_method_count       , KEYCXX)
 KEYWORD(__record_method_identifier  , KEYCXX)
 KEYWORD(__record_method_type        , KEYCXX)
-KEYWORD(__record_member_field_type  , KEYCXX)
-KEYWORD(__record_function_param_identifier  , KEYCXX)
 KEYWORD(__record_method_info        , KEYCXX)
+KEYWORD(__record_method_ptr         , KEYCXX) // TODO
+KEYWORD(__record_function_param_identifier, KEYCXX) // TODO -- join with __function_param_identifier?
 // friend traits
 KEYWORD(__record_friend_count       , KEYCXX)
 KEYWORD(__record_friend_identifier  , KEYCXX)
 KEYWORD(__record_friend_type        , KEYCXX)
 // namespace traits
-KEYWORD(__namespace_count           , KEYCXX)
-KEYWORD(__namespace_identifier      , KEYCXX)
-KEYWORD(__namespace_type            , KEYCXX)
-KEYWORD(__namespace_decl            , KEYCXX)
+KEYWORD(__namespace_count           , KEYCXX) // TODO - count namespaces only, takes __namespace_type
+KEYWORD(__namespace_identifier      , KEYCXX) // TODO - optional param (self), only ns, takes __namespace_type
+KEYWORD(__namespace_type            , KEYCXX) // TODO - takes NS names, Type, Var or Func
+KEYWORD(__namespace_decl            , KEYCXX) // TODO -- deprecate?
 // TODO
 KEYWORD(__annotate_str              , KEYCXX)
+// C++ atributes
+KEYWORD(__attribute_count           , KEYCXX)
+KEYWORD(__attribute_identifier      , KEYCXX)
 
 // Embarcadero Expression Traits
 KEYWORD(__is_lvalue_expr            , KEYCXX)

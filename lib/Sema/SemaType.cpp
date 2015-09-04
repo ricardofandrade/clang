@@ -999,6 +999,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_recordDirectBaseType:
   case DeclSpec::TST_recordVirtualBaseType:
   case DeclSpec::TST_RecordMemberFieldType:
+  case DeclSpec::TST_RecordMemberVarType:
   case DeclSpec::TST_RecordMethodType:
   case DeclSpec::TST_RecordFriendType:
   case DeclSpec::TST_meta_namespaceType:
@@ -1027,6 +1028,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       break;
     case DeclSpec::TST_RecordMemberFieldType:
       RTT = ReflectionTransformType::RecordMemberFieldType;
+      break;
+    case DeclSpec::TST_RecordMemberVarType:
+      RTT = ReflectionTransformType::RecordMemberVarType;
       break;
     case DeclSpec::TST_RecordMethodType:
       RTT = ReflectionTransformType::RecordMethodType;
@@ -5717,6 +5721,15 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
         return QualType();
 
       Reflected = ApplyQualRefFromOther(*this, FD->getType(), BaseType);
+      break;
+    }
+    ///  __record_member_var_type(R,I)
+    case ReflectionTransformType::RecordMemberVarType: {
+      VarDecl *VD = GetRecordMemberVarAtIndexPos(*this, Loc, TSInfo, IdxArgs[0]);
+      if (!VD)
+        return QualType();
+
+      Reflected = ApplyQualRefFromOther(*this, VD->getType(), BaseType);
       break;
     }
     ///  __record_method_type(R,I)

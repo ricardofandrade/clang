@@ -319,6 +319,8 @@ const CXXBaseSpecifier *GetRecordVBaseAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr);
 FieldDecl *GetRecordMemberFieldAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr);
+ VarDecl *GetRecordMemberVarAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr);
 const CXXMethodDecl *GetRecordMethodAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr);
 const FriendDecl *GetRecordFriendAtIndexPos(Sema& S, SourceLocation KWLoc,

@@ -123,6 +123,7 @@ bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
   case tok::kw___record_direct_base_type:
   case tok::kw___record_virtual_base_type:
   case tok::kw___record_member_field_type:
+  case tok::kw___record_member_var_type:
   case tok::kw___record_method_type:
   case tok::kw___record_friend_type:
   case tok::kw___namespace_type:
@@ -4323,6 +4324,7 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   case DeclSpec::TST_recordDirectBaseType:
   case DeclSpec::TST_recordVirtualBaseType:
   case DeclSpec::TST_RecordMemberFieldType:
+  case DeclSpec::TST_RecordMemberVarType:
   case DeclSpec::TST_RecordMethodType:
   case DeclSpec::TST_RecordFriendType: {
     // Update all parameter expressions
