@@ -92,7 +92,8 @@ namespace clang {
   enum UnaryExprOrTypeTrait {
     UETT_SizeOf,
     UETT_AlignOf,
-    UETT_VecStep
+    UETT_VecStep,
+    UETT_OpenMPRequiredSimdAlign,
   };
   
   // \brief Names for experimental (type) traits that take one type
