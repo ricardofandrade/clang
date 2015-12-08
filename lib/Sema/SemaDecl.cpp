@@ -125,6 +125,7 @@ bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
   case tok::kw___record_member_field_type:
   case tok::kw___record_member_var_type:
   case tok::kw___record_method_type:
+  case tok::kw___record_function_type:
   case tok::kw___record_friend_type:
   case tok::kw___namespace_type:
   case tok::kw___namespace_decl:
@@ -4551,6 +4552,7 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   case DeclSpec::TST_RecordMemberFieldType:
   case DeclSpec::TST_RecordMemberVarType:
   case DeclSpec::TST_RecordMethodType:
+  case DeclSpec::TST_RecordFunctionType:
   case DeclSpec::TST_RecordFriendType: {
     // Update all parameter expressions
     ArrayRef<Expr*> Args = DS.getParamExprs();

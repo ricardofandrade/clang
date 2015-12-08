@@ -315,6 +315,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_RecordMemberFieldType:
     case TST_RecordMemberVarType:
     case TST_RecordMethodType:
+    case TST_RecordFunctionType:
     case TST_RecordFriendType:
     case TST_meta_namespaceType:
     case TST_meta_namespaceDecl:
@@ -488,6 +489,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_RecordMemberFieldType: return "__record_member_field_type";
   case DeclSpec::TST_RecordMemberVarType: return "__record_member_var_type";
   case DeclSpec::TST_RecordMethodType: return "__record_method_type";
+  case DeclSpec::TST_RecordFunctionType: return "__record_function_type";
   case DeclSpec::TST_RecordFriendType: return "__record_friend_type";
   case DeclSpec::TST_meta_namespaceType: return "__namespace_type";
   case DeclSpec::TST_meta_namespaceDecl: return "__namespace_decl";

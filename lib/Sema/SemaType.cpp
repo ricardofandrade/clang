@@ -1455,6 +1455,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_RecordMemberFieldType:
   case DeclSpec::TST_RecordMemberVarType:
   case DeclSpec::TST_RecordMethodType:
+  case DeclSpec::TST_RecordFunctionType:
   case DeclSpec::TST_RecordFriendType:
   case DeclSpec::TST_meta_namespaceType:
   case DeclSpec::TST_meta_namespaceDecl:
@@ -1488,6 +1489,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       break;
     case DeclSpec::TST_RecordMethodType:
       RTT = ReflectionTransformType::RecordMethodType;
+      break;
+    case DeclSpec::TST_RecordFunctionType:
+      RTT = ReflectionTransformType::RecordFunctionType;
       break;
     case DeclSpec::TST_RecordFriendType:
       RTT = ReflectionTransformType::RecordFriendType;
@@ -7022,6 +7026,32 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
       Reflected = ApplyQualRefFromOther(*this, VD->getType(), BaseType);
       break;
     }
+    ///  __record_function_type(R,I)
+    case ReflectionTransformType::RecordFunctionType: { 
+      const FunctionDecl *MD = GetRecordFunctionAtIndexPos(*this, Loc, TSInfo, IdxArgs[0]);
+      if (!MD)
+        return QualType();
+
+      QualType MT = MD->getType(); //class Test() const;
+      //llvm::errs() << " > " << MT.getAsString() << " < \n";
+
+      QualType MPT = Context.getPointerType(MT);  //class Test() const;
+      //llvm::errs() << " > " << MPT.getAsString() << " < \n";
+
+      Reflected = ApplyQualRefFromOther(*this, MPT, BaseType);
+     /* const MemberPointerType* MPT = MT->getAs<MemberPointerType>();
+      if(MPT){ 
+        QualType QT(MPT,0);
+        Reflected = ApplyQualRefFromOther(*this, MPT->getPointeeType(), BaseType);
+      }*/
+      /*const FunctionProtoType *Proto = MT->getAs<FunctionProtoType>();
+      if (!Proto)
+        return QualType();
+
+      QualType QT(Proto,0);
+      Reflected = ApplyQualRefFromOther(*this, QT, BaseType);*/
+      break;
+    }
     ///  __record_method_type(R,I)
     case ReflectionTransformType::RecordMethodType: { 
       const CXXMethodDecl *MD = GetRecordMethodAtIndexPos(*this, Loc, TSInfo, IdxArgs[0]);
@@ -7031,11 +7061,15 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
       QualType MT = MD->getType(); //class Test() const;
       //llvm::errs() << " > " << MT.getAsString() << " < \n";
 
-      QualType ClassType = Context.getTypeDeclType(MD->getParent());
-      QualType MPT = Context.getMemberPointerType(MT,ClassType.getTypePtr());  //class Test() const;
-      //llvm::errs() << " > " << MPT.getAsString() << " < \n";
+      if (!MD->isStatic()) {
+        QualType ClassType = Context.getTypeDeclType(MD->getParent());
+        QualType MPT = Context.getMemberPointerType(MT,ClassType.getTypePtr());  //class Test() const;
+        //llvm::errs() << " > " << MPT.getAsString() << " < \n";
+        Reflected = ApplyQualRefFromOther(*this, MPT, BaseType);
+      } else {
+        Reflected = MT;
+      }
 
-      Reflected = ApplyQualRefFromOther(*this, MPT, BaseType);
      /* const MemberPointerType* MPT = MT->getAs<MemberPointerType>();
       if(MPT){ 
         QualType QT(MPT,0);

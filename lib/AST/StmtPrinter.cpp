@@ -2094,6 +2094,17 @@ static const char *getTypeTraitName(ReflectionTypeTrait RTT) {
     return "__record_function_param_identifier";
   case RTT_RecordMethodInfo:
     return "__record_method_info";
+  case RTT_RecordMethodPtr:
+    return "__record_method_ptr";
+
+  case RTT_RecordFunctionCount:
+    return "__record_function_count";
+  case RTT_RecordFunctionIdentifier:
+    return "__record_function_identifier";
+  case RTT_RecordFunctionInfo:
+    return "__record_function_info";
+  case RTT_RecordFunctionPtr:
+    return "__record_function_ptr";
 
   case RTT_RecordFriendCount:
     return "__record_friend_count";

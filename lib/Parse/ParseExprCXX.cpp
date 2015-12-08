@@ -2913,6 +2913,12 @@ static ReflectionTypeTrait ReflectionTypeTraitFromTokKind(tok::TokenKind kind) {
   case tok::kw___record_method_identifier:   return RTT_RecordMethodIdentifier;
   case tok::kw___record_function_param_identifier:   return RTT_RecordMethodParamIdentifier;
   case tok::kw___record_method_info:   return RTT_RecordMethodInfo;
+  case tok::kw___record_method_ptr:   return RTT_RecordMethodPtr;
+
+  case tok::kw___record_function_count:        return RTT_RecordFunctionCount;
+  case tok::kw___record_function_identifier:   return RTT_RecordFunctionIdentifier;
+  case tok::kw___record_function_info:   return RTT_RecordFunctionInfo;
+  case tok::kw___record_function_ptr:   return RTT_RecordFunctionPtr;
 
   case tok::kw___record_friend_count:        return RTT_RecordFriendCount;
   case tok::kw___record_friend_identifier:   return RTT_RecordFriendIdentifier;
@@ -3033,6 +3039,7 @@ ExprResult Parser::ParseReflectionTypeTrait() {
   case RTT_RecordMemberFieldCount:
 
   case RTT_RecordMethodCount:
+  case RTT_RecordFunctionCount:
   case RTT_RecordFriendCount:
 
   case RTT_AnnotateStr:
@@ -3083,6 +3090,10 @@ ExprResult Parser::ParseReflectionTypeTrait() {
 
   case RTT_RecordMethodIdentifier:
   case RTT_RecordMethodInfo:
+  case RTT_RecordMethodPtr:
+  case RTT_RecordFunctionIdentifier:
+  case RTT_RecordFunctionInfo:
+  case RTT_RecordFunctionPtr:
 
   case RTT_RecordFriendIdentifier:
     {

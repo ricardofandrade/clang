@@ -3502,6 +3502,7 @@ public:
     RecordMemberFieldType,
     RecordMemberVarType,
     RecordMethodType,
+    RecordFunctionType,
     RecordFriendType,
     MetaNamespaceType,
     MetaNamespaceDecl

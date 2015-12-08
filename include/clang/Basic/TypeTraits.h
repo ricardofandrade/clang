@@ -138,6 +138,12 @@ namespace clang {
     RTT_RecordMethodIdentifier,
     RTT_RecordMethodParamIdentifier,
     RTT_RecordMethodInfo,
+    RTT_RecordMethodPtr,
+
+    RTT_RecordFunctionCount,
+    RTT_RecordFunctionIdentifier,
+    RTT_RecordFunctionInfo,
+    RTT_RecordFunctionPtr,
 
     RTT_RecordFriendCount,
     RTT_RecordFriendIdentifier,

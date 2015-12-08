@@ -854,6 +854,9 @@ void TypePrinter::printReflectionTransformBefore(const ReflectionTransformType *
     case ReflectionTransformType::RecordMethodType:
       OS << "__record_method_type(";
       break;
+    case ReflectionTransformType::RecordFunctionType:
+      OS << "__record_function_type(";
+      break;
     case ReflectionTransformType::RecordFriendType:
       OS << "__record_friend_type(";
       break;

@@ -4339,6 +4339,28 @@ VarDecl *clang::GetRecordMemberVarAtIndexPos(Sema& S, SourceLocation KWLoc,
   return *It;
 }
 
+FunctionDecl *clang::GetRecordFunctionAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr)
+{
+  // T has to be a record type (not complete)
+  const CXXRecordDecl *RD = RequireRecordType(S, KWLoc, TSInfo, false);
+  if (!RD)
+    return 0;
+
+  // Evaluate the index expression, error on Idx < 0
+  typedef CXXRecordDecl::specific_decl_iterator<FunctionDecl> var_iterator;
+  size_t MaxIdx = std::distance(var_iterator(RD->decls_begin()), var_iterator(RD->decls_end()));
+  int Idx = RequireValidFieldIndex(S, KWLoc, TSInfo, IdxExpr, MaxIdx);
+  if (Idx < 0)
+    return 0;
+
+  // Get the requested field decl
+  var_iterator It = var_iterator(RD->decls_begin());
+  std::advance(It, Idx);
+
+  return *It;
+}
+
 #if 1  //todo >>
 
 static int RequireValidIndex(Sema& S, SourceLocation KWLoc, Expr *IdxExpr, size_t MaxIdx, unsigned DiagID)
@@ -4368,7 +4390,7 @@ static int RequireValidIndex(Sema& S, SourceLocation KWLoc, Expr *IdxExpr, size_
 #endif 
 
 
-const CXXMethodDecl *clang::GetRecordMethodAtIndexPos(Sema& S, SourceLocation KWLoc,
+CXXMethodDecl *clang::GetRecordMethodAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr)
 {
   // T has to be a record type (not complete)
@@ -4691,6 +4713,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   case RTT_RecordMemberFieldCount:
   case RTT_RecordMemberFieldBitFieldSize:
   case RTT_RecordMethodCount:
+  case RTT_RecordFunctionCount:
   case RTT_RecordFriendCount:
     // always "size_t" result type:
     VType = Context.getSizeType();
@@ -4711,6 +4734,9 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   case RTT_RecordMemberFieldInfo:
   case RTT_RecordMemberVarInfo:  
   case RTT_RecordMethodInfo:
+  case RTT_RecordMethodPtr:
+  case RTT_RecordFunctionInfo:
+  case RTT_RecordFunctionPtr:
     // ... size_t .. or ??
     VType = Context.IntTy; //? Context.LongLongTy
     break;
@@ -4736,6 +4762,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   case RTT_TypeSugaredName:
   case RTT_RecordMemberFieldIdentifier:
   case RTT_RecordMethodIdentifier:
+  case RTT_RecordFunctionIdentifier:
   case RTT_RecordMethodParamIdentifier:
   case RTT_RecordFriendIdentifier:
   case RTT_AnnotateStr:
@@ -5096,16 +5123,6 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       Value = AllocateConvertedSpecifier(Context, KWLoc, VType, FD);
       break;
     }
-    ///__record_method_info(T,I) -> size_t (meta_info_enum)
-    case RTT_RecordMethodInfo: {
-      // Try to get the requested method
-      const CXXMethodDecl *MD = GetRecordMethodAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
-      if (!MD)
-        return ExprError();
-
-      Value = AllocateConvertedSpecifier(Context, KWLoc, VType, MD);
-      break;
-    }
     case RTT_RecordMemberFieldIsMutable: {
       // Try to get the requested member field
       FieldDecl *FD = GetRecordMemberFieldAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
@@ -5153,6 +5170,113 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       Value = new (Context) CXXBoolLiteralExpr(FD->getType()->getAs<ReferenceType>(), VType, KWLoc);
       break;
     }
+    case RTT_RecordFunctionPtr: {
+      // Try to get the requested member field
+      FunctionDecl *MD = GetRecordFunctionAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!MD)
+        return ExprError();
+
+      // Disallow e.g. bit-field address taking
+      //CheckAddressOfOperand
+
+      QualType ClassType = Context.getTypeDeclType(dyn_cast<CXXRecordDecl>(MD->getParent()));
+      NestedNameSpecifier *Qualifier
+        = NestedNameSpecifier::Create(Context, 0, false,
+        ClassType.getTypePtr());
+      CXXScopeSpec SS;
+      SS.MakeTrivial(Context, Qualifier, KWLoc);
+
+      // see BuildDeclarationNameExpr
+      VType = MD->getType().getNonReferenceType();
+      // Simulate a DeclRefExpr at the current location, referencing the function
+      ValueDecl* VD = dyn_cast<ValueDecl>(MD);
+      ExprResult MDRE = BuildDeclRefExpr(VD, VType, VK_LValue, KWLoc, &SS);
+      assert(MDRE.isUsable() && "BuildDeclRefExpr failed for Method!");
+
+      Value = CreateBuiltinUnaryOp(KWLoc, UO_AddrOf, MDRE.get()).get();
+      if (!Value)
+        return ExprError();
+      VType = Value->getType();    // get the pointer type
+
+      break;
+    }    
+    ///__record_function_info(T,I) -> size_t (meta_info_enum)
+    case RTT_RecordFunctionInfo: {
+      // Try to get the requested Function
+      const FunctionDecl *MD = GetRecordFunctionAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!MD)
+        return ExprError();
+
+      Value = AllocateConvertedSpecifier(Context, KWLoc, VType, MD);
+      break;
+    }    
+    ///__record_function_count(R)
+    case RTT_RecordFunctionCount: { 
+      // Complete definition required!
+      const CXXRecordDecl *RD = RequireRecordType(*this, KWLoc, TSInfo, true);
+      if (!RD)
+        return ExprError();
+
+      // Count how many Functions are in this record
+      typedef CXXRecordDecl::specific_decl_iterator<FunctionDecl> var_iterator;
+      uint64_t val = std::distance(var_iterator(RD->decls_begin()), var_iterator(RD->decls_end()));
+      llvm::APSInt apval = Context.MakeIntValue(val, VType);
+      Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
+      break;
+    }
+    ///__record_function_identifier(R,I)
+    case RTT_RecordFunctionIdentifier: { 
+      const FunctionDecl *MD = GetRecordFunctionAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!MD)
+        return ExprError();
+      
+      // Just take the Decl name
+      //PrintingPolicy PP(LangOpts);
+      //PP.SuppressUnwrittenScope = true;  // see above
+      //We use a human-readable name for the declaration for now.
+      Value = AllocateStringLiteral(Context, KWLoc, VType, MD->getNameAsString());
+      break;
+    }
+    ///__record_method_info(T,I) -> size_t (meta_info_enum)
+    case RTT_RecordMethodInfo: {
+      // Try to get the requested method
+      const CXXMethodDecl *MD = GetRecordMethodAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!MD)
+        return ExprError();
+
+      Value = AllocateConvertedSpecifier(Context, KWLoc, VType, MD);
+      break;
+    }
+    case RTT_RecordMethodPtr: {
+      // Try to get the requested member field
+      CXXMethodDecl *MD = GetRecordMethodAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!MD)
+        return ExprError();
+
+      // Disallow e.g. bit-field address taking
+      //CheckAddressOfOperand
+
+      QualType ClassType = Context.getTypeDeclType(MD->getParent());
+      NestedNameSpecifier *Qualifier
+        = NestedNameSpecifier::Create(Context, 0, false,
+        ClassType.getTypePtr());
+      CXXScopeSpec SS;
+      SS.MakeTrivial(Context, Qualifier, KWLoc);
+
+      // see BuildDeclarationNameExpr
+      VType = MD->getType().getNonReferenceType();
+      // Simulate a DeclRefExpr at the current location, referencing the method
+      ValueDecl* VD = dyn_cast<ValueDecl>(MD);
+      ExprResult MDRE = BuildDeclRefExpr(VD, VType, VK_LValue, KWLoc, &SS);
+      assert(MDRE.isUsable() && "BuildDeclRefExpr failed for Method!");
+
+      Value = CreateBuiltinUnaryOp(KWLoc, UO_AddrOf, MDRE.get()).get();
+      if (!Value)
+        return ExprError();
+      VType = Value->getType();    // get the pointer type
+
+      break;
+    }    
     ///__record_method_count(R)
     case RTT_RecordMethodCount: { 
       // Complete definition required!

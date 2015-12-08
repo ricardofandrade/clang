@@ -305,6 +305,7 @@ public:
   static const TST TST_recordDirectBaseType = clang::TST_recordDirectBaseType;
   static const TST TST_recordVirtualBaseType = clang::TST_recordVirtualBaseType;
   static const TST TST_RecordMethodType = clang::TST_RecordMethodType;
+  static const TST TST_RecordFunctionType = clang::TST_RecordFunctionType;
   static const TST TST_RecordMemberFieldType = clang::TST_RecordMemberFieldType;
   static const TST TST_RecordMemberVarType = clang::TST_RecordMemberVarType;
   static const TST TST_RecordFriendType = clang::TST_RecordFriendType;
@@ -414,7 +415,7 @@ private:
             T == TST_recordBaseType || 
             T == TST_recordDirectBaseType || T == TST_recordVirtualBaseType ||
             T == TST_RecordMemberFieldType || T == TST_RecordMemberVarType ||
-            T == TST_RecordMethodType || T == TST_RecordFriendType || 
+            T == TST_RecordFunctionType || T == TST_RecordMethodType || T == TST_RecordFriendType || 
             T == TST_meta_namespaceType || T == TST_meta_namespaceDecl);
   }
   static bool isExprRep(TST T) {
@@ -424,7 +425,7 @@ private:
     return (T == TST_recordBaseType || T == TST_recordDirectBaseType || 
             T == TST_recordVirtualBaseType ||
             T == TST_RecordMemberFieldType || T == TST_RecordMemberVarType ||
-            T == TST_RecordMethodType || T == TST_RecordFriendType || 
+            T == TST_RecordFunctionType || T == TST_RecordMethodType || T == TST_RecordFriendType || 
             T == TST_meta_namespaceDecl);
   }
 

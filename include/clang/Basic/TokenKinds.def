@@ -481,16 +481,18 @@ KEYWORD(__function_param_identifier  , KEYCXX)
 
 // TODO static function traits - takes reflected namespaces? operators, conversions?
 // Not needed?
-//KEYWORD(__record_function_count       , KEYCXX)
-//KEYWORD(__record_function_identifier  , KEYCXX)
-//KEYWORD(__record_function_type        , KEYCXX)
+KEYWORD(__record_function_count       , KEYCXX)
+KEYWORD(__record_function_identifier  , KEYCXX)
+KEYWORD(__record_function_type        , KEYCXX)
+KEYWORD(__record_function_info        , KEYCXX)
+KEYWORD(__record_function_ptr         , KEYCXX)
 
 // member function traits - operators, conversions?
 KEYWORD(__record_method_count       , KEYCXX)
 KEYWORD(__record_method_identifier  , KEYCXX)
 KEYWORD(__record_method_type        , KEYCXX)
 KEYWORD(__record_method_info        , KEYCXX)
-KEYWORD(__record_method_ptr         , KEYCXX) // TODO
+KEYWORD(__record_method_ptr         , KEYCXX)
 KEYWORD(__record_function_param_identifier, KEYCXX) // TODO -- join with __function_param_identifier?
 // friend traits
 KEYWORD(__record_friend_count       , KEYCXX)

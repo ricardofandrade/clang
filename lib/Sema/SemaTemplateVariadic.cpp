@@ -705,6 +705,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_RecordMemberFieldType:
   case TST_RecordMemberVarType:
   case TST_RecordMethodType:
+  case TST_RecordFunctionType:
   case TST_RecordFriendType:
   case TST_meta_namespaceDecl:
       {

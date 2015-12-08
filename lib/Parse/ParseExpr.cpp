@@ -1316,6 +1316,12 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   case tok::kw___record_method_identifier:
   case tok::kw___record_function_param_identifier:
   case tok::kw___record_method_info:
+  case tok::kw___record_method_ptr:
+
+  case tok::kw___record_function_count:
+  case tok::kw___record_function_identifier:
+  case tok::kw___record_function_info:
+  case tok::kw___record_function_ptr:
 
   case tok::kw___record_friend_count:
   case tok::kw___record_friend_identifier:
