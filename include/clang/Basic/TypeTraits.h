@@ -113,6 +113,8 @@ namespace clang {
     RTT_RecordDirectBaseCount,
     RTT_RecordVirtualBaseCount,
 
+    RTT_RecordMemberTypeCount,
+    RTT_RecordMemberTypeInfo,
     RTT_RecordMemberVarCount,
     RTT_RecordMemberVarPtr,
     RTT_RecordMemberVarRef,

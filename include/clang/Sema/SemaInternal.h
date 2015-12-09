@@ -356,6 +356,8 @@ FieldDecl *GetRecordMemberFieldAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr);
 VarDecl *GetRecordMemberVarAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr);
+TagDecl *GetRecordMemberTypeAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr);
 FunctionDecl *GetRecordFunctionAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr);
 CXXMethodDecl *GetRecordMethodAtIndexPos(Sema& S, SourceLocation KWLoc,

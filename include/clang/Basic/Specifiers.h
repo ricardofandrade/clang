@@ -69,6 +69,7 @@ namespace clang {
     TST_recordVirtualBaseType,  //  __record_virtual_base_type
     TST_RecordMemberFieldType,  //  __record_member_field_type
     TST_RecordMemberVarType,    //  __record_member_var_type
+    TST_RecordMemberType,    //  __record_member_type
     TST_RecordMethodType,       //  __record_method_type
     TST_RecordFunctionType,       //  __record_function_type
     TST_RecordFriendType,       //  __record_friend_type

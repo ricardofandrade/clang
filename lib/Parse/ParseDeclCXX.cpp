@@ -923,6 +923,8 @@ void Parser::ParseReflectionTypeSpecifier(DeclSpec &DS) {
     TagType = DeclSpec::TST_RecordMemberFieldType;
   else if (TagTokKind == tok::kw___record_member_var_type)
     TagType = DeclSpec::TST_RecordMemberVarType;
+  else if (TagTokKind == tok::kw___record_member_type)
+    TagType = DeclSpec::TST_RecordMemberType;
   else if (TagTokKind == tok::kw___record_method_type)
     TagType = DeclSpec::TST_RecordMethodType;
   else if (TagTokKind == tok::kw___record_function_type)

@@ -982,6 +982,7 @@ Parser::isExpressionOrTypeSpecifierSimple(tok::TokenKind Kind) {
   case tok::kw___record_virtual_base_type:
   case tok::kw___record_member_field_type:
   case tok::kw___record_member_var_type:
+  case tok::kw___record_member_type:
   case tok::kw___record_method_type:
   case tok::kw___record_function_type:
   case tok::kw___record_friend_type:

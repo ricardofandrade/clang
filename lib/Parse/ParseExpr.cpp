@@ -1291,6 +1291,9 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   case tok::kw___record_direct_base_count:
   case tok::kw___record_virtual_base_count:
 
+  case tok::kw___record_member_type_count:
+  case tok::kw___record_member_type_info:
+
   case tok::kw___record_member_var_count:
   case tok::kw___record_member_var_ptr:
   case tok::kw___record_member_var_ref:

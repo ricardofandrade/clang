@@ -4339,6 +4339,28 @@ VarDecl *clang::GetRecordMemberVarAtIndexPos(Sema& S, SourceLocation KWLoc,
   return *It;
 }
 
+TagDecl *clang::GetRecordMemberTypeAtIndexPos(Sema& S, SourceLocation KWLoc,
+  TypeSourceInfo *TSInfo, Expr *IdxExpr)
+{
+  // T has to be a record type (not complete)
+  const CXXRecordDecl *RD = RequireRecordType(S, KWLoc, TSInfo, false);
+  if (!RD)
+    return 0;
+
+  // Evaluate the index expression, error on Idx < 0
+  typedef CXXRecordDecl::specific_decl_iterator<TagDecl> var_iterator;
+  size_t MaxIdx = std::distance(var_iterator(RD->decls_begin()), var_iterator(RD->decls_end()));
+  int Idx = RequireValidFieldIndex(S, KWLoc, TSInfo, IdxExpr, MaxIdx);
+  if (Idx < 0)
+    return 0;
+
+  // Get the requested field decl
+  var_iterator It = var_iterator(RD->decls_begin());
+  std::advance(It, Idx);
+
+  return *It;
+}
+
 FunctionDecl *clang::GetRecordFunctionAtIndexPos(Sema& S, SourceLocation KWLoc,
   TypeSourceInfo *TSInfo, Expr *IdxExpr)
 {
@@ -4709,7 +4731,8 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
   case RTT_RecordBaseCount:
   case RTT_RecordDirectBaseCount:
   case RTT_RecordVirtualBaseCount:
-  case RTT_RecordMemberVarCount:  
+  case RTT_RecordMemberTypeCount:
+  case RTT_RecordMemberVarCount:
   case RTT_RecordMemberFieldCount:
   case RTT_RecordMemberFieldBitFieldSize:
   case RTT_RecordMethodCount:
@@ -4731,8 +4754,9 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
     break;
 
   case RTT_RecordBaseAccessSpec:
+  case RTT_RecordMemberTypeInfo:
   case RTT_RecordMemberFieldInfo:
-  case RTT_RecordMemberVarInfo:  
+  case RTT_RecordMemberVarInfo:
   case RTT_RecordMethodInfo:
   case RTT_RecordMethodPtr:
   case RTT_RecordFunctionInfo:
@@ -4924,6 +4948,31 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       Value = new (Context) CXXBoolLiteralExpr(TP->hasUnnamedOrLocalType(), VType, KWLoc);
       break;
     }
+    case RTT_RecordMemberTypeCount: {
+      // Complete definition required!
+      const CXXRecordDecl *RD = RequireRecordType(*this, KWLoc, TSInfo, true);
+      if (!RD)
+        return ExprError();
+
+      // Count the range
+      typedef CXXRecordDecl::specific_decl_iterator<TagDecl> var_iterator;
+      uint64_t val = std::distance(var_iterator(RD->decls_begin()), var_iterator(RD->decls_end()));
+      llvm::APSInt apval = Context.MakeIntValue(val, VType);
+      Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
+      break;
+    }
+    ///__record_member_type_info(T,I) -> size_t (meta_info_enum)
+    case RTT_RecordMemberTypeInfo: {
+      // Try to get the requested member field
+      TagDecl *VD = GetRecordMemberTypeAtIndexPos(*this, KWLoc, TSInfo, IdxArgs[0]);
+      if (!VD)
+        return ExprError();
+
+      // What access is specified for this var?
+      //Value = AllocateConvertedAccessSpecifier(Context, KWLoc, VType, FD->getAccess());
+      Value = AllocateConvertedSpecifier(Context, KWLoc, VType, VD);
+      break;
+    }    
     case RTT_RecordMemberVarCount: {
       // Complete definition required!
       const CXXRecordDecl *RD = RequireRecordType(*this, KWLoc, TSInfo, true);

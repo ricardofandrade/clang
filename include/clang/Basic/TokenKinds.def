@@ -469,10 +469,10 @@ KEYWORD(__record_member_var_info        , KEYCXX)
 KEYWORD(__record_member_var_is_reference, KEYCXX)
 KEYWORD(__record_member_var_type        , KEYCXX)
 
-// TODO - sub types - takes reflected namespaces? 
-KEYWORD(__record_member_type      , KEYCXX) //TODO
-KEYWORD(__record_member_type_info , KEYCXX) //TODO
-KEYWORD(__record_member_type_count, KEYCXX) //TODO
+// TODO - nested types - takes reflected namespaces? 
+KEYWORD(__record_member_type      , KEYCXX)
+KEYWORD(__record_member_type_info , KEYCXX)
+KEYWORD(__record_member_type_count, KEYCXX)
 
 KEYWORD(__local_identifier  , KEYCXX) // TODO - only var names
 

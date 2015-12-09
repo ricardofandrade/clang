@@ -2054,6 +2054,9 @@ static const char *getTypeTraitName(ReflectionTypeTrait RTT) {
   case RTT_RecordDirectBaseCount:  return "__record_direct_base_count";
   case RTT_RecordVirtualBaseCount: return "__record_virtual_base_count";
 
+  case RTT_RecordMemberTypeCount: return "__record_member_type_count";
+  case RTT_RecordMemberTypeInfo: return "__record_member_type_info";
+
   case RTT_RecordMemberVarCount: return "__record_member_var_count";
   case RTT_RecordMemberVarPtr: return "__record_member_var_ptr";
   case RTT_RecordMemberVarRef: return "__record_member_var_ref";

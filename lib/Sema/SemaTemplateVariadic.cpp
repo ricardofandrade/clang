@@ -702,6 +702,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_recordBaseType:
   case TST_recordDirectBaseType:
   case TST_recordVirtualBaseType:
+  case TST_RecordMemberType:
   case TST_RecordMemberFieldType:
   case TST_RecordMemberVarType:
   case TST_RecordMethodType:

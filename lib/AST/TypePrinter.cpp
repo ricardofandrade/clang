@@ -845,6 +845,9 @@ void TypePrinter::printReflectionTransformBefore(const ReflectionTransformType *
     case ReflectionTransformType::RecordVirtualBaseType:
       OS << "__record_virtual_base_type(";
       break;
+    case ReflectionTransformType::RecordMemberType:
+      OS << "__record_member_type(";
+      break;
     case ReflectionTransformType::RecordMemberFieldType:
       OS << "__record_member_field_type(";
       break;

@@ -3501,6 +3501,7 @@ public:
     RecordVirtualBaseType,
     RecordMemberFieldType,
     RecordMemberVarType,
+    RecordMemberType,
     RecordMethodType,
     RecordFunctionType,
     RecordFriendType,
