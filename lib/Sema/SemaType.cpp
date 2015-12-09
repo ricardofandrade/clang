@@ -7067,7 +7067,7 @@ QualType Sema::BuildReflectionTransformType(TypeSourceInfo *TSInfo,
         //llvm::errs() << " > " << MPT.getAsString() << " < \n";
         Reflected = ApplyQualRefFromOther(*this, MPT, BaseType);
       } else {
-        Reflected = MT;
+        Reflected = Context.getPointerType(MT);
       }
 
      /* const MemberPointerType* MPT = MT->getAs<MemberPointerType>();

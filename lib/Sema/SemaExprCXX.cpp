@@ -4348,7 +4348,7 @@ FunctionDecl *clang::GetRecordFunctionAtIndexPos(Sema& S, SourceLocation KWLoc,
     return 0;
 
   // Evaluate the index expression, error on Idx < 0
-  typedef CXXRecordDecl::specific_decl_iterator<FunctionDecl> var_iterator;
+  typedef CXXRecordDecl::filtered_decl_iterator<CXXMethodDecl, &CXXMethodDecl::isStatic> var_iterator;
   size_t MaxIdx = std::distance(var_iterator(RD->decls_begin()), var_iterator(RD->decls_end()));
   int Idx = RequireValidFieldIndex(S, KWLoc, TSInfo, IdxExpr, MaxIdx);
   if (Idx < 0)
@@ -5218,7 +5218,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
         return ExprError();
 
       // Count how many Functions are in this record
-      typedef CXXRecordDecl::specific_decl_iterator<FunctionDecl> var_iterator;
+      typedef CXXRecordDecl::filtered_decl_iterator<CXXMethodDecl, &CXXMethodDecl::isStatic> var_iterator;
       uint64_t val = std::distance(var_iterator(RD->decls_begin()), var_iterator(RD->decls_end()));
       llvm::APSInt apval = Context.MakeIntValue(val, VType);
       Value = IntegerLiteral::Create(Context, apval, VType, KWLoc);
@@ -5267,7 +5267,7 @@ ExprResult Sema::BuildReflectionTypeTrait(ReflectionTypeTrait RTT,
       VType = MD->getType().getNonReferenceType();
       // Simulate a DeclRefExpr at the current location, referencing the method
       ValueDecl* VD = dyn_cast<ValueDecl>(MD);
-      ExprResult MDRE = BuildDeclRefExpr(VD, VType, VK_LValue, KWLoc, &SS);
+      ExprResult MDRE = BuildDeclRefExpr(VD, VType, MD->isStatic() ? VK_LValue : VK_RValue, KWLoc, &SS);
       assert(MDRE.isUsable() && "BuildDeclRefExpr failed for Method!");
 
       Value = CreateBuiltinUnaryOp(KWLoc, UO_AddrOf, MDRE.get()).get();
